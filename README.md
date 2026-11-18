@@ -2,7 +2,7 @@
   <img src="https://raw.githubusercontent.com/sunnyhmz7010/halo-plugin-simnook/main/src/main/resources/logo.svg" alt="SIMnook Logo" width="96" />
   <h1>SIMnook</h1>
   <p>在 Halo 中管理号卡与消费记录，并提供公开的 SIM/eSIM 收藏展示墙</p>
-  <p>公开号卡墙派生自 <a href="https://github.com/BurningSky0306/SIMerald">SIMerald</a> 与 <a href="https://github.com/Tokinx/komari-theme-emerald">Komari Emerald 主题</a>，相关代码沿用其 MIT 许可证，见 [frontend/LICENSE](./frontend/LICENSE)。在此谨向原作者致以诚挚谢意，感谢其作出的原创性贡献。</p>
+  <p>公开号卡墙派生自 <a href="https://github.com/BurningSky0306/SIMerald">SIMerald</a> 与 <a href="https://github.com/Tokinx/komari-theme-emerald">Komari Emerald 主题</a>，相关代码沿用其 MIT 许可证，见 <a href="https://github.com/sunnyhmz7010/halo-plugin-simnook/blob/main/frontend/LICENSE">frontend/LICENSE</a>。在此谨向原作者致以诚挚谢意，感谢其作出的原创性贡献。</p>
 </div>
 
 <p align="center">
