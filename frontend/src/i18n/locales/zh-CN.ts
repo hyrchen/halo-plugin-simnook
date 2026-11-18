@@ -8,7 +8,6 @@
  */
 export default {
   halo: {
-    managed: '由 Halo 保存与管理',
     pendingConversion: '待折算',
     missingRate: '缺少参考汇率',
     missingRateCards: '{count} 张号卡缺少参考汇率，未计入估值。',
@@ -39,8 +38,6 @@ export default {
   },
 
   footer: {
-    demo: '演示数据',
-    syncedAt: '数据更新于 {time}',
     notSynced: '数据尚未同步',
   },
 

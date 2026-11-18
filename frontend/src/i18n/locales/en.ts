@@ -6,7 +6,6 @@ import type { MessageSchema } from '@/i18n'
 
 const en: MessageSchema = {
   halo: {
-    managed: 'Stored and managed by Halo',
     pendingConversion: 'Awaiting conversion',
     missingRate: 'Reference exchange rate unavailable',
     missingRateCards: '{count} card has no reference exchange rate and is excluded from estimates. | {count} cards have no reference exchange rate and are excluded from estimates.',
@@ -36,8 +35,6 @@ const en: MessageSchema = {
   },
 
   footer: {
-    demo: 'Demo data',
-    syncedAt: 'Updated {time}',
     notSynced: 'Data not synced yet',
   },
 
