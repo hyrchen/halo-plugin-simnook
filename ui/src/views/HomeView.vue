@@ -343,7 +343,7 @@ function openFrontend() { window.open('/simnook/', '_blank', 'noopener,noreferre
    </div>
    <div v-show="formTab === 'personal'">
     <div class="simnook-form-grid grid grid-cols-1 gap-x-4 md:grid-cols-2">
-     <FormKit name="balance" type="number" :label="t('余额')" step="0.01" />
+     <FormKit name="balance" type="number" :label="form.currency ? t('余额（币种）', { currency: form.currency }) : t('余额（与续费币种相同）')" step="0.01" />
      <FormKit name="balanceUpdatedAt" type="date" :label="t('余额更新日期')" />
      <FormKit name="device" type="select" :label="t('主要使用设备')" :placeholder="t('选择主要使用设备')" :options="withExisting(devices, form.device)" searchable allow-create clearable />
      <FormKit name="account" type="text" :label="t('账户名称')" :help="t('仅记录名称，不存储密码、密钥或令牌。')" />
