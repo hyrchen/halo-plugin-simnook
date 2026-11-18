@@ -5,7 +5,6 @@ import dayjs from 'dayjs'
 import { compareText, currentLocale, formatNumber, i18n } from '@/i18n'
 import { CURRENCY_SYMBOLS, getPriceCNY, resolveFinanceCurrency } from '@/utils/financeHelper'
 import { getRegionCode } from '@/utils/regionHelper'
-import { parseBillingCycleType } from '@/utils/tagHelper'
 
 const { t } = i18n.global
 
@@ -179,6 +178,26 @@ export function cycleText(card: SimCard): string {
   if (card.cycleDays > 0)
     return t('cycle.every', card.cycleDays)
   return card.cycleLabel ? t('cycle.varies') : '-'
+}
+
+/** 计费周期类型：按天数归入标准周期，其余按月/日为自定义。 */
+export type BillingCycleType = 'monthly' | 'quarterly' | 'semi_annual' | 'annual' | 'biennial' | 'triennial' | 'quinquennial' | 'once' | 'custom'
+
+const BILLING_CYCLE_RANGES: Array<{ type: BillingCycleType, min: number, max: number }> = [
+  { type: 'monthly', min: 27, max: 32 },
+  { type: 'quarterly', min: 87, max: 95 },
+  { type: 'semi_annual', min: 175, max: 185 },
+  { type: 'annual', min: 360, max: 370 },
+  { type: 'biennial', min: 720, max: 750 },
+  { type: 'triennial', min: 1080, max: 1150 },
+  { type: 'quinquennial', min: 1800, max: 1850 },
+]
+
+/** 按续费天数判断计费周期类型，-1 表示一次性购买。 */
+export function parseBillingCycleType(cycleDays: number): BillingCycleType {
+  if (cycleDays === -1)
+    return 'once'
+  return BILLING_CYCLE_RANGES.find(range => cycleDays >= range.min && cycleDays <= range.max)?.type ?? 'custom'
 }
 
 /** Billing period for price units, e.g. `年` / `year`; cycles that are not a standard period read as days */

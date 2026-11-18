@@ -1,6 +1,5 @@
 import type { SiteInfo } from '@shared/types'
 import type { AppLocale } from '@/i18n'
-import type { ByteDecimalsConfig } from '@/utils/helper'
 import { usePreferredDark, useStorageAsync } from '@vueuse/core'
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
@@ -11,15 +10,6 @@ export type ThemeMode = 'auto' | 'light' | 'dark'
 export type CardStyle = 'namecard' | 'dial' | 'bar'
 type SortMode = 'renewal' | 'order' | 'name' | 'country'
 type EarthViewMode = 'earth' | 'earth-stop' | 'maps' | 'cards' | 'hide'
-
-/** 固定的字节精度配置 */
-const BYTE_DECIMALS: ByteDecimalsConfig = {
-  B: 0,
-  KB: 0,
-  MB: 1,
-  GB: 1,
-  TB: 2,
-}
 
 function isValidThemeMode(value: unknown): value is ThemeMode {
   return value === 'auto' || value === 'light' || value === 'dark'
@@ -102,9 +92,6 @@ const useAppStore = defineStore('app', () => {
   })
 
   watch(locale, setLocale, { immediate: true })
-
-  // 字节格式化精度（固定配置）
-  const byteDecimals: ByteDecimalsConfig = { ...BYTE_DECIMALS }
 
   // 计算属性：公告配置
   const alertEnabled = computed<boolean>(() => {
@@ -281,7 +268,6 @@ const useAppStore = defineStore('app', () => {
     defaultCardStyle,
     defaultSort,
     sitename,
-    byteDecimals,
     alertEnabled,
     alertTitle,
     alertContent,

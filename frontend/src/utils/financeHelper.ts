@@ -200,13 +200,6 @@ export function calculateTotalValueCNY(
   return cards.reduce((sum, card) => countable(card) ? sum + (getPriceCNY(card, exchangeRates) ?? 0) : sum, 0)
 }
 
-export function calculateValueCNY(
-  card: SimCard,
-  exchangeRates: ExchangeRates,
-): number | null {
-  return getPriceCNY(card, exchangeRates)
-}
-
 export function calculateTotalMonthlyAverageCostCNY(
   cards: SimCard[],
   exchangeRates: ExchangeRates,
