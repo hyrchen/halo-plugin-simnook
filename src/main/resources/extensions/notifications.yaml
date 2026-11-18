@@ -3,8 +3,8 @@ kind: ReasonType
 metadata:
   name: simnook-channel-reminder
 spec:
-  displayName: SIMnook 续费提醒 / Renewal reminders
-  description: Halo 渠道的每日续费待办汇总 / Daily renewal digest via Halo channels
+  displayName: SIMnook 续费提醒
+  description: 通过 Halo 渠道发送每日续费待办汇总
   properties:
     - name: channel
       type: string
@@ -18,7 +18,14 @@ spec:
     - name: summary
       type: string
       optional: false
-    - name: summaryEn
+    - name: items
+      type: array
+      description: 待处理号卡，每项含 name、number（脱敏）、status、level、date
+      optional: false
+    - name: count
+      type: number
+      optional: false
+    - name: consoleUrl
       type: string
       optional: false
 ---
@@ -31,27 +38,55 @@ spec:
     reasonType: simnook-channel-reminder
     language: default
   template:
-    title: "SIMnook 续费待办 · [(${businessDate})]"
+    title: "SIMnook 续费提醒"
     rawBody: |
+      SIMnook 续费提醒 · [(${businessDate})]
+      [(${count > 0 ? '共 ' + count + ' 张号卡需要处理：' : ''})]
       [(${summary})]
-      请登录 Halo 后台 SIMnook 处理续费。
+
+      前往处理：[(${consoleUrl})]
+    # 邮件客户端只可靠支持表格布局和内联样式，因此不使用 class 与外部 CSS。
     htmlBody: |
-      <pre th:text="${summary}"></pre>
-      <p>请登录 Halo 后台 SIMnook 处理续费。</p>
----
-apiVersion: notification.halo.run/v1alpha1
-kind: NotificationTemplate
-metadata:
-  name: simnook-channel-reminder-en
-spec:
-  reasonSelector:
-    reasonType: simnook-channel-reminder
-    language: en
-  template:
-    title: "SIMnook renewal digest · [(${businessDate})]"
-    rawBody: |
-      [(${summaryEn})]
-      Open SIMnook in the Halo Console to record renewals.
-    htmlBody: |
-      <pre th:text="${summaryEn}"></pre>
-      <p>Open SIMnook in the Halo Console to record renewals.</p>
+      <div style="margin:0;padding:32px 16px;background:#f5f6f8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;color:#1f2329;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e8eaed;border-radius:12px;border-collapse:separate;">
+          <tr>
+            <td style="padding:28px 28px 20px;">
+              <div style="font-size:13px;line-height:20px;color:#8a919c;" th:text="${businessDate}">2026-11-18</div>
+              <div style="margin-top:4px;font-size:20px;line-height:28px;font-weight:600;color:#1f2329;">SIMnook 续费提醒</div>
+              <div th:if="${count > 0}" style="margin-top:8px;font-size:14px;line-height:22px;color:#5c6370;">
+                共 <span style="font-weight:600;color:#1f2329;" th:text="${count}">0</span> 张号卡需要处理
+              </div>
+              <div th:unless="${count > 0}" style="margin-top:8px;font-size:14px;line-height:22px;color:#5c6370;" th:text="${summary}">这是一条测试通知。</div>
+            </td>
+          </tr>
+          <tr th:if="${count > 0}">
+            <td style="padding:0 28px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+                <tr th:each="item : ${items}">
+                  <td style="padding:14px 0;border-top:1px solid #eef0f2;vertical-align:top;">
+                    <div style="font-size:15px;line-height:22px;font-weight:500;color:#1f2329;" th:text="${item['name']}">号卡名称</div>
+                    <div style="margin-top:2px;font-size:13px;line-height:20px;color:#8a919c;">
+                      <span th:text="${item['number']}">•••• 0000</span>
+                      <span style="padding:0 6px;color:#c9cdd4;">|</span>
+                      <span th:text="${item['date']}">2026-11-20</span>
+                    </div>
+                  </td>
+                  <td align="right" style="padding:14px 0 14px 12px;border-top:1px solid #eef0f2;vertical-align:top;white-space:nowrap;">
+                    <span th:text="${item['status']}"
+                          th:style="${item['level'] == 'overdue'} ? 'display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;line-height:20px;background:#fdecec;color:#d03a3a;' : (${item['level'] == 'window'} ? 'display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;line-height:20px;background:#e8f3ff;color:#1f6fd1;' : 'display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;line-height:20px;background:#fff4e5;color:#b86200;')"
+                          style="display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;line-height:20px;background:#fff4e5;color:#b86200;">即将到期</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:20px 28px 28px;border-top:1px solid #eef0f2;">
+              <a th:href="${consoleUrl}" href="#" style="display:inline-block;padding:10px 20px;border-radius:8px;background:#1f2329;color:#ffffff;font-size:14px;line-height:20px;font-weight:500;text-decoration:none;">前往处理</a>
+            </td>
+          </tr>
+        </table>
+        <div style="max-width:560px;margin:16px auto 0;font-size:12px;line-height:18px;color:#7d848f;text-align:center;">
+          此邮件由 SIMnook 自动发送，号码仅显示末四位。
+        </div>
+      </div>

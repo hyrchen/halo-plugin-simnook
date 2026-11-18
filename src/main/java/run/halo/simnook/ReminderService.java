@@ -313,12 +313,7 @@ public class ReminderService {
                     return Flux.fromIterable(channel.getSpec().getRecipients())
                             .concatMap(user -> eligible(name, user)
                                     .flatMap(allowed -> allowed
-                                            ? emit(
-                                                    channel,
-                                                    user,
-                                                    "TEST",
-                                                    "这是一条 SIMnook 测试通知。",
-                                                    "This is a SIMnook test notification.")
+                                            ? emit(channel, user, RenewalSettings.today(clock), List.of())
                                             : Mono.error(BackupService.bad("用户已停用、无权限或已取消订阅")))
                                     .onErrorResume(error -> {
                                         log.warn("SIMnook 渠道 {} 测试失败，用户 {}", name, user, error);
@@ -412,12 +407,7 @@ public class ReminderService {
                                 failures.add(user);
                                 return Mono.empty();
                             }
-                            return emit(
-                                            channel,
-                                            user,
-                                            today.toString(),
-                                            summary(cards, today, Locale.SIMPLIFIED_CHINESE),
-                                            summary(cards, today, Locale.ENGLISH))
+                            return emit(channel, user, today, cards)
                                     .then(Mono.defer(() -> {
                                         channel.getSpec().getSubmittedDates().put(user, slot);
                                         channel.getSpec()
@@ -444,7 +434,8 @@ public class ReminderService {
                 .then();
     }
 
-    private Mono<Void> emit(ReminderChannel channel, String user, String date, String summary, String summaryEn) {
+    private Mono<Void> emit(ReminderChannel channel, String user, LocalDate today, List<SimCard> cards) {
+        var consoleUrl = links.processLink("/console/simnook");
         return emitter.emit(
                 REASON,
                 builder -> builder.author(UserIdentity.of("system"))
@@ -453,13 +444,41 @@ public class ReminderService {
                                 .kind("ConfigMap")
                                 .name("simnook-config")
                                 .title("SIMnook")
-                                .url(links.processLink("/console/simnook"))
+                                .url(consoleUrl)
                                 .build())
                         .attribute("recipient", user)
                         .attribute("channel", channel.getMetadata().getName())
-                        .attribute("businessDate", date)
-                        .attribute("summary", summary)
-                        .attribute("summaryEn", summaryEn));
+                        .attribute("businessDate", today.toString())
+                        .attribute(
+                                "summary",
+                                cards.isEmpty() ? "这是一条测试通知，渠道配置正常。" : summary(cards, today, Locale.SIMPLIFIED_CHINESE))
+                        .attribute("items", items(cards, today))
+                        .attribute("count", cards.size())
+                        .attribute("consoleUrl", consoleUrl));
+    }
+
+    /** 邮件模板逐行渲染用的号卡列表；号码只给脱敏值，level 供模板选择状态颜色。 */
+    static List<Map<String, String>> items(List<SimCard> cards, LocalDate today) {
+        return cards.stream()
+                .map(card -> {
+                    var view = PublicCard.from(card, today);
+                    var code = CardFacts.urgencyCode(view.status(), view.nextRenewalAt(), view.nextRenewalEnd(), today);
+                    var item = new LinkedHashMap<String, String>();
+                    item.put("name", view.name());
+                    item.put("number", view.numberMasked());
+                    item.put(
+                            "status",
+                            CardFacts.urgency(view.status(), view.nextRenewalAt(), view.nextRenewalEnd(), today));
+                    item.put(
+                            "level",
+                            "overdue".equals(code) ? "overdue" : "window".equals(code) ? "window" : "upcoming");
+                    item.put(
+                            "date",
+                            view.nextRenewalAt()
+                                    + (view.nextRenewalEnd() == null ? "" : " ~ " + view.nextRenewalEnd()));
+                    return (Map<String, String>) item;
+                })
+                .toList();
     }
 
     private Mono<Boolean> eligible(String name, String user) {
