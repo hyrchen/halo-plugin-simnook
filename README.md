@@ -1,7 +1,8 @@
 <div align="center">
   <img src="https://raw.githubusercontent.com/sunnyhmz7010/halo-plugin-simnook/main/src/main/resources/logo.svg" alt="SIMnook Logo" width="96" />
   <h1>SIMnook</h1>
-  <p>在 Halo 里管理号卡与消费记录，并生成一个号码脱敏的公开号卡墙</p>
+  <p>在 Halo 中管理号卡与消费记录，并提供公开的 SIM/eSIM 收藏展示墙</p>
+  <p>公开号卡墙派生自 [SIMerald](https://github.com/BurningSky0306/SIMerald) 与 [Komari Emerald 主题](https://github.com/Tokinx/komari-theme-emerald)，相关代码沿用其 MIT 许可证。在此谨向原作者致以诚挚谢意，感谢其作出的原创性贡献。</p>
 </div>
 
 <p align="center">
@@ -21,7 +22,7 @@
 
 ## ✨ 为什么做这个插件
 
-手里的境外 eSIM 和实体卡一多，每张卡的续费周期都不一样，靠备忘录记到期日很容易漏，续费后又算不清每张卡到底花了多少。记在表格里在手机上翻着也不方便，直接公开又担心把完整号码暴露出去。
+手里的 eSIM 和实体卡一多，每张卡的续费周期都不一样，靠备忘录记到期日很容易漏，续费后又算不清每张卡到底花了多少。记在表格里在手机上翻着也不方便，直接公开又担心把完整号码暴露出去。
 
 - 到期前通过 Halo 的站内信或邮件收到提醒，不用自己盯着日历
 - 想给访客看自己在用哪些号卡，但只公开国家、余下天数这类信息
@@ -131,7 +132,7 @@ halo-plugin-simnook/
 
 ## 📄 许可证
 
-本项目基于 [GPL-3.0](./LICENSE) 开源。公开号卡墙派生自 [SIMerald](https://github.com/BurningSky0306/SIMerald) 与 [Komari Emerald 主题](https://github.com/Tokinx/komari-theme-emerald)，相关代码沿用其 MIT 许可证，见 [frontend/LICENSE](./frontend/LICENSE)。
+本项目基于 [GPL-3.0](./LICENSE) 开源。
 
 <div align="center">
   <sub>Built with ❤️ by Sunny</sub>
