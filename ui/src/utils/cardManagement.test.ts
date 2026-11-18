@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ManagedCardView } from '../api/generated'
-import { compactNumber, filterCardViews } from './cardManagement'
+import { compactNumber, filterCardViews, tidyPhoneNumber } from './cardManagement'
 
 const defaults = { keyword: '', country: '', status: '', urgency: '' }
 describe('号卡管理筛选', () => {
@@ -18,6 +18,16 @@ describe('号卡管理筛选', () => {
   expect(compactNumber(' +86 138-0000　1234 ')).toBe('+8613800001234')
   expect(compactNumber('(852) 5555.0123')).toBe('85255550123')
   expect(compactNumber('   ')).toBeUndefined()
+ })
+ it('在国际区号后加空格，覆盖一位、两位和三位区号', () => {
+  expect(tidyPhoneNumber(' +372 5314-6889 ')).toBe('+372 53146889')
+  expect(tidyPhoneNumber('+8613800001234')).toBe('+86 13800001234')
+  expect(tidyPhoneNumber('+1 (415) 555-0123')).toBe('+1 4155550123')
+  expect(tidyPhoneNumber('+85255550123')).toBe('+852 55550123')
+  expect(tidyPhoneNumber('+853 6359 3704')).toBe('+853 63593704')
+  expect(tidyPhoneNumber('+447700900123')).toBe('+44 7700900123')
+  expect(tidyPhoneNumber('13800001234')).toBe('13800001234')
+  expect(tidyPhoneNumber('+86')).toBe('+86')
  })
  it('在完整数据上搜索，并支持格式化号码和组合筛选', () => {
   expect(filterCardViews(cards, { ...defaults, keyword: '+8613800001234' }).map(card => card.id)).toEqual(['a'])

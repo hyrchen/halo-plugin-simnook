@@ -7,7 +7,7 @@ import { SimCardV1alpha1Api, SimnookManagementV1alpha1Api, type SimCard, type Ca
 import ExpenseFields from './ExpenseFields.vue'
 import QuickRenewal from './QuickRenewal.vue'
 import ReminderPanel from './ReminderPanel.vue'
-import { compactNumber, filterCardViews, URGENCY_CODES } from '../utils/cardManagement'
+import { filterCardViews, tidyPhoneNumber, URGENCY_CODES } from '../utils/cardManagement'
 import { BUILTIN_CARRIERS, builtinLogoOptions, carrierLogo } from '../../../frontend/shared/carriers'
 import { CYCLE_OPTIONS, cardName, copyCardConfiguration, cycleChoice, entryExpiry, localDay } from '../utils/cardEntry'
 
@@ -48,7 +48,7 @@ const publicFieldOptions = computed(() => [
 const alwaysPublic = computed(() => [t('展示名称'), t('运营商'), t('号码末四位'), t('号码国家'), t('续费周期与价格'), t('有效期与续费日期'), t('消费金额与日期')])
 const alwaysPrivate = computed(() => [t('消费记录标题'), t('数据检查备注')])
 // FormKit 文本输入默认有约 20ms 防抖，失焦时等它把最后的输入写回模型后再整理，否则会被原值覆盖。
-function tidyNumber() { setTimeout(() => { form.value.number = compactNumber(form.value.number) }, 50) }
+function tidyNumber() { setTimeout(() => { form.value.number = tidyPhoneNumber(form.value.number) }, 50) }
 const cycle = ref('')
 let initializing = false
 const checking = ref('')
@@ -167,7 +167,7 @@ function normalize(spec: CardSpec): CardSpec {
   if (!result[key]) delete result[key]
  }
  const country = result.countryName?.trim() ?? ''
- result.number = compactNumber(result.number)
+ result.number = tidyPhoneNumber(result.number)
  if (!result.publicFields?.length) delete result.publicFields
  const flag = country.match(/^[\u{1F1E6}-\u{1F1FF}]{2}/u)?.[0] ?? ''
  result.region = flag || undefined
