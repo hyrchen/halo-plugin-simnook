@@ -11,7 +11,13 @@ const content = ref('')
 const preview = ref<BackupPreview>(), result = ref<BackupRestoreResult>()
 const differences = ref<BackupPreviewItem>()
 const choices = ref<Record<string, string>>({})
-const busy = ref(false), exporting = ref(''), error = ref('')
+const busy = ref(false), exporting = ref(''), error = ref(''), fileName = ref('')
+const fileInput = ref<HTMLInputElement>()
+const exports = computed(() => [
+ { format: 'json', title: t('完整 JSON 备份'), description: t('JSON 备份说明') },
+ { format: 'cards', title: t('号卡清单 CSV'), description: t('CSV 备份说明') },
+ { format: 'records', title: t('消费记录 CSV'), description: t('CSV 备份说明') },
+])
 let generation = 0
 const key = (item: BackupPreviewItem) => `${item.kind}/${item.name}`
 const actionLabel = (action: string) => t(({ create: '新增', skip: '跳过', overwrite: '覆盖', append: '仅追加消费记录' } as Record<string, string>)[action] || action)
@@ -35,10 +41,13 @@ async function download(format: string) {
  finally { exporting.value = '' }
 }
 
-async function selectFile(files: { file?: File }[]) {
+async function selectFile(event: Event) {
+ const input = event.target as HTMLInputElement
+ const file = input.files?.[0]
+ // 清空后可以再次选择同一个文件重新预览。
+ input.value = ''
  const current = ++generation
- const file = files?.[0]?.file
- preview.value = undefined; result.value = undefined; differences.value = undefined; error.value = ''; content.value = ''
+ preview.value = undefined; result.value = undefined; differences.value = undefined; error.value = ''; content.value = ''; fileName.value = file?.name ?? ''
  if (!file) return
  if (file.size > 32 * 1024 * 1024) { error.value = t('备份文件不能超过 32 MiB'); return }
  try { const text = await file.text(); if (current === generation) { content.value = text; await inspect() } }
@@ -75,28 +84,41 @@ function restore() {
 </script>
 
 <template>
- <VSpace direction="column" align="stretch" spacing="lg" class="w-full">
-  <h2 class="font-semibold">{{ t('导出备份') }}</h2>
-  <VAlert type="info" :description="t('备份范围说明')" />
-  <VSpace spacing="sm" class="flex-wrap">
-   <VButton :loading="exporting === 'json'" :disabled="Boolean(exporting)" @click="download('json')">{{ t('完整 JSON 备份') }}</VButton>
-   <VButton :loading="exporting === 'cards'" :disabled="Boolean(exporting)" @click="download('cards')">{{ t('号卡清单 CSV') }}</VButton>
-   <VButton :loading="exporting === 'records'" :disabled="Boolean(exporting)" @click="download('records')">{{ t('消费记录 CSV') }}</VButton>
-  </VSpace>
-  <h2 class="font-semibold">{{ t('恢复备份') }}</h2>
-  <FormKit type="file" :ignore="true" :label="t('选择 JSON 备份')" :help="t('恢复范围说明')" accept=".json,application/json" :disabled="busy" @input="selectFile" />
+ <VSpace direction="column" align="stretch" spacing="lg" class="w-full p-4">
+  <section>
+   <h2 class="mb-2 text-sm font-medium text-gray-900">{{ t('导出备份') }}</h2>
+   <VEntityContainer class="overflow-hidden rounded-base border">
+    <VEntity v-for="item in exports" :key="item.format">
+     <template #start><VEntityField :title="item.title" :description="item.description" /></template>
+     <template #end><VButton size="sm" :loading="exporting === item.format" :disabled="Boolean(exporting)" @click="download(item.format)">{{ t('导出') }}</VButton></template>
+    </VEntity>
+   </VEntityContainer>
+  </section>
+  <section>
+   <h2 class="mb-2 text-sm font-medium text-gray-900">{{ t('恢复备份') }}</h2>
+   <VEntityContainer class="overflow-hidden rounded-base border">
+    <VEntity>
+     <template #start><VEntityField :title="fileName || t('选择 JSON 备份')" :description="t('恢复范围说明')" /></template>
+     <template #end>
+      <input ref="fileInput" type="file" class="hidden" accept=".json,application/json" @change="selectFile">
+      <VButton size="sm" :disabled="busy" @click="fileInput?.click()">{{ t('选择文件') }}</VButton>
+      <VButton v-if="content && !busy" size="sm" @click="inspect">{{ t('重新预览') }}</VButton>
+     </template>
+    </VEntity>
+   </VEntityContainer>
+  </section>
   <VLoading v-if="busy" />
-  <VAlert v-if="error" type="error" :description="error" />
+  <VAlert v-if="error" type="error" :description="error" :closable="false" />
   <template v-if="preview && !result">
-   <VEntityContainer>
+   <VEntityContainer class="overflow-hidden rounded-base border">
     <VEntity v-for="item in preview.items" :key="key(item)">
      <template #start><VEntityField :title="item.title" :description="`${t('号卡')} · ${item.name}`" :max-width="200" /></template>
      <template #end><VButton v-if="item.differences?.length" size="sm" @click="differences = item">{{ t('查看字段差异') }}</VButton></template>
      <template #footer>
       <VSpace direction="column" align="stretch" spacing="sm" class="w-full p-4">
        <FormKit v-model="choices[key(item)]" :ignore="true" type="select" :label="t('恢复方式')" :options="(item.actions ?? []).map(value => ({ value, label: actionLabel(value) }))" :disabled="busy" />
-       <VAlert v-if="choices[key(item)] === 'append'" type="info" :description="t('将追加记录', { count: item.appendCount })" />
-       <VAlert v-for="warning in item.warnings" :key="warning" type="warning" :description="warning" />
+       <VEntityField v-if="choices[key(item)] === 'append'" :description="t('将追加记录', { count: item.appendCount })" />
+       <VAlert v-for="warning in item.warnings" :key="warning" type="warning" :description="warning" :closable="false" />
        <VEntityField v-if="!item.differences?.length" :description="t('业务字段一致')" />
       </VSpace>
      </template>
@@ -105,15 +127,14 @@ function restore() {
    <VButton type="secondary" :disabled="busy || !selectedCount" @click="restore">{{ t('按预览恢复') }} ({{ selectedCount }})</VButton>
   </template>
   <template v-if="result">
-   <h2 class="font-semibold">{{ t('恢复结果') }}</h2>
-   <VEntityContainer>
+   <h2 class="text-sm font-medium text-gray-900">{{ t('恢复结果') }}</h2>
+   <VEntityContainer class="overflow-hidden rounded-base border">
     <VEntity v-for="item in result.items" :key="`${item.kind}/${item.name}`">
      <template #start><VEntityField :title="item.name" :description="item.message" /></template>
      <template #end><VEntityField :title="statusLabel(item.status || '')" /></template>
     </VEntity>
    </VEntityContainer>
   </template>
-  <VButton v-if="content && !busy" @click="inspect">{{ t('重新预览') }}</VButton>
  </VSpace>
  <VModal v-if="differences" :title="`${differences.title} · ${t('查看字段差异')}`" :width="800" mount-to-body @close="differences = undefined">
   <VEntityContainer>
