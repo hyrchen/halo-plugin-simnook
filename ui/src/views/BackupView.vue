@@ -32,10 +32,11 @@ async function download(format: string) {
  if (exporting.value) return
  exporting.value = format
  try {
-  const { data } = await api.exportBackup({ format }, { responseType: 'blob' })
+  const { data, headers } = await api.exportBackup({ format }, { responseType: 'blob' })
   const url = URL.createObjectURL(data as unknown as Blob)
   const anchor = document.createElement('a'); anchor.href = url
-  anchor.download = format === 'json' ? 'simnook-backup.json' : `simnook-${format}.csv`
+  // 文件名由后端生成，带 Asia/Shanghai 时间戳，如 simnook-backup-20261118-204500.json。
+  anchor.download = /filename="([^"]+)"/.exec(String(headers['content-disposition'] ?? ''))?.[1] ?? (format === 'json' ? 'simnook-backup.json' : `simnook-${format}.csv`)
   anchor.click(); setTimeout(() => URL.revokeObjectURL(url), 1000)
  } catch (cause) { Toast.error(t('备份操作失败')); console.error(cause) }
  finally { exporting.value = '' }

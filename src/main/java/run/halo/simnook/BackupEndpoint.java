@@ -45,13 +45,17 @@ public class BackupEndpoint implements CustomEndpoint {
                         "backups/export",
                         request -> {
                             var format = request.queryParam("format").orElse("json");
+                            // 文件名带上 Asia/Shanghai 时间戳，多次导出不会互相覆盖。
+                            var stamp = java.time.ZonedDateTime.now(RenewalSettings.ZONE)
+                                    .format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"));
                             if ("json".equals(format))
                                 return backups.export()
-                                        .flatMap(value -> download("simnook-backup.json", MediaType.APPLICATION_JSON)
+                                        .flatMap(value -> download(
+                                                        "simnook-backup-" + stamp + ".json", MediaType.APPLICATION_JSON)
                                                 .bodyValue(value));
                             return backups.csv(format)
                                     .flatMap(value -> download(
-                                                    "simnook-" + format + ".csv",
+                                                    "simnook-" + format + "-" + stamp + ".csv",
                                                     new MediaType("text", "csv", StandardCharsets.UTF_8))
                                             .bodyValue(value));
                         },
