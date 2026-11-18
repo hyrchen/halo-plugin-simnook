@@ -16,8 +16,6 @@ export const BUILTIN_CARRIERS = [
   { name: 'Club Sim', aliases: ['Club Sim（香港）', 'ClubSIM'], file: 'club-sim.webp' },
   { name: 'RedPocket', aliases: ['Red Pocket Mobile', 'RedPocket（美国）'], file: 'redpocket.png' },
   { name: 'eSIM.GG', aliases: [], file: 'esim-gg.png' },
-  // 图标取自官网 www.esim.cc 的 logo 中的海豚图形
-  { name: 'eSIM.CC', aliases: [], file: 'esim-cc.webp' },
   { name: 'DITO', aliases: ['DITO eSIM', 'DITO Telecommunity', 'DITO（菲律宾）', 'DITO eSIM（菲律宾）'], file: 'dito.png' },
   // 以下图标来源于 BankNav（banknav.com）运营商导航
   { name: 'csl', aliases: ['csl.', 'CSL Mobile', 'csl（香港）'], file: 'csl.webp' },
