@@ -1,13 +1,11 @@
 import type { ManagedCardView } from '../api/generated'
 
 export const URGENCY_CODES = ['window', 'overdue', 'days3', 'days7', 'days15', 'days30', 'days60', 'beyond', 'noDate', 'cancelled']
-export const TODO_CODES = ['window', 'overdue', 'days3', 'days7', 'noDate']
 
-export function filterCardViews(cards: ManagedCardView[], filters: { keyword: string; country: string; status: string; urgency: string; todo: boolean }): ManagedCardView[] {
+export function filterCardViews(cards: ManagedCardView[], filters: { keyword: string; country: string; status: string; urgency: string }): ManagedCardView[] {
  const keyword = filters.keyword.trim().toLocaleLowerCase()
  const digits = keyword.replace(/[^0-9]/g, '')
  return cards.filter(card => {
-  if (filters.todo && (!TODO_CODES.includes(card.urgencyCode ?? '') || card.status === 'cancelled')) return false
   if (filters.country && card.countryName !== filters.country) return false
   if (filters.status && card.status !== filters.status) return false
   if (filters.urgency && card.urgencyCode !== filters.urgency) return false

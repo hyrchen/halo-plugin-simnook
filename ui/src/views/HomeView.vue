@@ -23,7 +23,7 @@ const keyword = ref('')
 const countryFilter = ref<string>(), statusFilter = ref<string>(), urgencyFilter = ref<string>()
 const renewing = ref<ManagedCardView>()
 const urgencyLabels: Record<string, string> = { window: '续费窗口开放', overdue: '已逾期', days3: '未来 3 天内', days7: '未来 7 天内', days15: '未来 15 天内', days30: '未来 30 天内', days60: '未来 60 天内', beyond: '超过 60 天', noDate: '无续费日期', cancelled: '已注销' }
-const filteredCards = computed(() => filterCardViews(cards.value, { keyword: keyword.value, country: countryFilter.value ?? '', status: statusFilter.value ?? '', urgency: urgencyFilter.value ?? '', todo: tab.value === 'todo' }))
+const filteredCards = computed(() => filterCardViews(cards.value, { keyword: keyword.value, country: countryFilter.value ?? '', status: statusFilter.value ?? '', urgency: urgencyFilter.value ?? '' }))
 const total = computed(() => filteredCards.value.length)
 const pagedCards = computed(() => filteredCards.value.slice((page.value - 1) * size.value, page.value * size.value))
 const countryOptions = computed(() => [...new Set(cards.value.map(card => card.countryName).filter((value): value is string => Boolean(value)))].sort().map(value => ({ value, label: value })))
@@ -221,7 +221,7 @@ function remove(card: ManagedCardView) {
   },
  })
 }
-watch([keyword, countryFilter, statusFilter, urgencyFilter, size, tab], () => { page.value = 1 })
+watch([keyword, countryFilter, statusFilter, urgencyFilter, size], () => { page.value = 1 })
 watch(filteredCards, () => { page.value = Math.min(page.value, Math.max(1, Math.ceil(total.value / size.value))) })
 watch(locale, load)
 onMounted(load)
@@ -233,14 +233,14 @@ function openFrontend() { window.open('/simnook/', '_blank', 'noopener,noreferre
  <VPageHeader title="SIMnook">
   <template #actions>
    <VButton @click="openFrontend">{{ t('打开前台页面') }}</VButton>
-   <VButton v-if="tab === 'cards' || tab === 'todo'" type="secondary" @click="edit()">{{ t('新增号卡') }}</VButton>
+   <VButton v-if="tab === 'cards'" type="secondary" @click="edit()">{{ t('新增号卡') }}</VButton>
   </template>
  </VPageHeader>
  <div class="m-0 md:m-4">
  <VCard :body-class="['!p-0']">
   <template #header><VTabbar v-model:active-id="tab" :items="tabs" class="w-full" type="outline" /></template>
- <template v-if="tab === 'cards' || tab === 'todo'">
  <ReminderPanel v-if="tab === 'todo'" @saved="load" />
+  <template v-else>
   <VSpace spacing="md" class="w-full flex-wrap p-4">
    <SearchInput v-model="keyword" :placeholder="t('搜索名称、号码或运营商')" />
    <FilterDropdown v-model="countryFilter" :label="t('号码国家')" :items="[{ label: t('全部') }, ...countryOptions]" />
@@ -273,7 +273,7 @@ function openFrontend() { window.open('/simnook/', '_blank', 'noopener,noreferre
    </template>
   </VEntity></VEntityContainer>
  </template>
-  <template #footer><VPagination v-model:page="page" v-model:size="size" :total="total" :size-options="[10, 20, 50]" :page-label="t('页')" :size-label="t('条 / 页')" :total-label="t('分页总数', { count: total })" /></template>
+  <template v-if="tab === 'cards'" #footer><VPagination v-model:page="page" v-model:size="size" :total="total" :size-options="[10, 20, 50]" :page-label="t('页')" :size-label="t('条 / 页')" :total-label="t('分页总数', { count: total })" /></template>
  </VCard></div>
  <QuickRenewal v-if="renewing?.id" :name="renewing.id" :today="renewing.asOfDate || localDay()" @close="renewing = undefined" @saved="renewing = undefined; load()" />
  <VModal v-if="visible" :title="editing ? t('编辑号卡') : t('新增号卡')" :width="760" mount-to-body :layer-closable="false" @close="!saving && (visible = false)">

@@ -109,7 +109,6 @@ onMounted(() => load())
    <h2 class="font-semibold">{{ t('通知渠道') }}</h2>
    <VButton type="secondary" :disabled="loading || failed || Boolean(busy)" @click="edit()">{{ t('添加渠道') }}</VButton>
   </VSpace>
-  <VAlert type="info" :description="t('Halo渠道说明')" />
   <VLoading v-if="loading" />
   <VEmpty v-else-if="failed" :title="t('提醒状态加载失败')"><template #actions><VButton @click="load(false)">{{ t('重试') }}</VButton></template></VEmpty>
   <template v-else-if="state">
@@ -161,7 +160,6 @@ onMounted(() => load())
   </template>
  </VSpace>
  <VModal v-if="visible" :title="t(draft.name ? '编辑通知渠道' : '添加通知渠道')" :width="560" mount-to-body :layer-closable="false" @close="!saving && (visible = false)">
-  <VAlert type="info" class="mb-4" :description="t('Halo接收说明')" />
   <VAlert v-if="editorError" type="error" class="mb-4" :description="editorError" />
   <FormKit id="simnook-channel" v-model="draft" type="form" :actions="false" :disabled="saving" @submit="save">
    <FormKit name="displayName" type="text" :label="t('渠道名称')" validation="required|length:1,100" />
