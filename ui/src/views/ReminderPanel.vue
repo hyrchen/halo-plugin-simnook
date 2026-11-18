@@ -2,13 +2,14 @@
 import { computed, onMounted, ref } from 'vue'
 import { axiosInstance, consoleApiClient } from '@halo-dev/api-client'
 import { Dialog, Toast, VAlert, VButton, VDescription, VDescriptionItem, VDropdownItem, VEmpty, VEntity, VEntityContainer, VEntityField, VLoading, VModal, VSpace, VSwitch } from '@halo-dev/components'
-import { events } from '@halo-dev/ui-shared'
+import { events, utils } from '@halo-dev/ui-shared'
 import { ReminderChannelsApi, type ReminderChannelInput, type ReminderChannelView, type ReminderChannelsView } from '../api/reminders'
 import { useSimnookI18n } from '../locales'
 
 const { t } = useSimnookI18n()
 const emit = defineEmits<{ saved: [] }>()
 const api = new ReminderChannelsApi(undefined, '', axiosInstance)
+const canManage = utils.permission.has(['system:plugins:manage'])
 const state = ref<ReminderChannelsView>()
 const loading = ref(false), failed = ref(false), busy = ref(''), saving = ref(false)
 const savingSettings = ref(false), visible = ref(false), editorError = ref('')
@@ -140,16 +141,20 @@ onMounted(() => load())
     </VEntity>
    </VEntityContainer>
    <h2 class="font-semibold">{{ t('发送时间') }}</h2>
-   <VDescription>
+   <!-- 管理员直接编辑表单，避免与只读摘要重复；其他用户只看摘要。 -->
+   <VDescription v-if="!canManage">
     <VDescriptionItem :label="t('每日汇总时间')" :content="`${state.sendTime} · ${state.timezone}`" />
     <VDescriptionItem :label="t('汇总范围')" :content="t('提醒范围', { days: state.daysAhead })" />
     <VDescriptionItem v-if="state.channels?.some(channel => channel.enabled)" :label="t('下次汇总时间')" :content="dateLabel(state.nextRunAt)" />
    </VDescription>
-   <div v-permission="['system:plugins:manage']">
+   <div v-else>
+    <p v-if="state.channels?.some(channel => channel.enabled)" class="mb-4 text-sm text-gray-500">{{ t('下次汇总时间') }}：{{ dateLabel(state.nextRunAt) }}</p>
     <FormKit id="simnook-reminder-settings" v-model="schedule" type="form" :actions="false" :disabled="savingSettings" @submit="saveSettings">
-     <FormKit name="sendTime" type="text" :label="t('每日汇总时间')" validation="required|matches:/^(?:[01][0-9]|2[0-3]):[0-5][0-9]$/" :help="t('渠道时间说明')" />
-     <FormKit name="timezone" type="text" :label="t('业务时区')" validation="required" :help="t('业务时区说明')" />
-     <FormKit name="daysAhead" type="number" :label="t('提前提醒天数')" validation="required|number|min:1|max:60" min="1" max="60" step="1" :help="t('提前提醒天数说明')" />
+     <div class="simnook-form-grid grid grid-cols-1 gap-x-4 md:grid-cols-3">
+      <FormKit name="sendTime" type="text" :label="t('每日汇总时间')" validation="required|matches:/^(?:[01][0-9]|2[0-3]):[0-5][0-9]$/" :help="t('渠道时间说明')" />
+      <FormKit name="timezone" type="text" :label="t('业务时区')" validation="required" :help="t('业务时区说明')" />
+      <FormKit name="daysAhead" type="number" :label="t('提前提醒天数')" validation="required|number|min:1|max:60" min="1" max="60" step="1" :help="t('提前提醒天数说明')" />
+     </div>
      <VButton type="secondary" :loading="savingSettings" @click="submit('simnook-reminder-settings')">{{ t('保存设置') }}</VButton>
     </FormKit>
    </div>

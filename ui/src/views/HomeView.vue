@@ -2,7 +2,7 @@
 import { useSimnookI18n } from '../locales'
 import { computed, ref, onMounted, watch, nextTick } from 'vue'
 import { axiosInstance } from '@halo-dev/api-client'
-import { Dialog, Toast, VAlert, VAvatar, VPageHeader, VCard, VButton, VDropdownDivider, VDropdownItem, VEntityContainer, VEntity, VEntityField, VPagination, VLoading, VEmpty, VModal, VSpace, VTabbar } from '@halo-dev/components'
+import { Dialog, Toast, VAlert, VAvatar, VPageHeader, VCard, VButton, VDropdownDivider, VDropdownItem, VEntityContainer, VEntity, VEntityField, VPagination, VLoading, VEmpty, VModal, VSpace, VStatusDot, VTabbar, VTag } from '@halo-dev/components'
 import { SimCardV1alpha1Api, SimnookManagementV1alpha1Api, type SimCard, type CardSpec, type ManagedCardView } from '../api/generated'
 import ExpenseFields from './ExpenseFields.vue'
 import QuickRenewal from './QuickRenewal.vue'
@@ -27,6 +27,12 @@ const filteredCards = computed(() => filterCardViews(cards.value, { keyword: key
 const total = computed(() => filteredCards.value.length)
 const pagedCards = computed(() => filteredCards.value.slice((page.value - 1) * size.value, page.value * size.value))
 const countryOptions = computed(() => [...new Set(cards.value.map(card => card.countryName).filter((value): value is string => Boolean(value)))].sort().map(value => ({ value, label: value })))
+// 后端紧急度文案带「⓪①…」排序前缀供前台使用，后台列表只展示文字部分。
+const urgencyText = (card: ManagedCardView) => card.urgency?.replace(/^[\u2460-\u2473\u24EA]\s*/u, '') ?? ''
+const urgencyState = (code?: string) =>
+ code === 'overdue' ? 'error' : ['window', 'days3', 'days7'].includes(code ?? '') ? 'warning' : ['noDate', 'cancelled'].includes(code ?? '') ? 'default' : 'success'
+const renewalDate = (card: ManagedCardView) => [card.nextRenewalAt, card.nextRenewalEnd].filter(Boolean).join(' ~ ')
+const cardLogo = (card: ManagedCardView) => card.logo || carrierLogo(card.carrier)
 function clearFilters() { keyword.value = ''; countryFilter.value = undefined; statusFilter.value = undefined; urgencyFilter.value = undefined }
 const loading = ref(false), saving = ref(false), visible = ref(false), conflict = ref(false), loadError = ref(false)
 const deleting = ref('')
@@ -247,10 +253,15 @@ function openFrontend() { window.open('/simnook/', '_blank', 'noopener,noreferre
   <VEmpty v-else-if="!filteredCards.length" :title="t(cards.length ? '没有匹配的号卡' : '还没有号卡')" :message="t(cards.length ? '调整筛选条件查看其他号卡。' : '首次安装为空库，点击新增号卡开始录入。')" />
   <VEntityContainer v-else><VEntity v-for="card in pagedCards" :key="card.id">
    <template #start>
-    <VSpace direction="column" align="start">
-     <VEntityField :title="card.name" :max-width="200" :description="[card.carrier?.trim(), card.number?.trim() || t('未填写号码')].filter(Boolean).join(' · ')" @click="openCard(card)" />
-     <VEntityField :title="[card.statusLabel, card.urgency].filter(Boolean).join(' · ')" :description="t('消费记录数量', card.history?.length || 0)" :max-width="200" />
-    </VSpace>
+    <VEntityField><template #description><VAvatar :src="cardLogo(card)" :alt="card.carrier || card.name" size="md" /></template></VEntityField>
+    <VEntityField :title="card.name" :description="[card.carrier?.trim(), card.number?.trim() || t('未填写号码')].filter(Boolean).join(' · ')" @click="openCard(card)">
+     <template v-if="card.type || card.countryName" #extra><VSpace spacing="xs"><VTag v-if="card.type">{{ card.type }}</VTag><VTag v-if="card.countryName">{{ [card.region, card.countryName].filter(Boolean).join(' ') }}</VTag></VSpace></template>
+    </VEntityField>
+   </template>
+   <template #end>
+    <VEntityField v-if="renewalDate(card)" :description="renewalDate(card)" />
+    <VEntityField :description="t('消费记录数量', card.history?.length || 0)" />
+    <VEntityField><template #description><VStatusDot :state="urgencyState(card.urgencyCode)" :animate="card.urgencyCode === 'overdue'" :text="card.status === 'active' ? urgencyText(card) : [card.statusLabel, urgencyText(card)].filter(Boolean).join(' · ')" /></template></VEntityField>
    </template>
    <template #dropdownItems>
     <VDropdownItem @click="openCard(card)">{{ t('编辑') }}</VDropdownItem>
@@ -272,24 +283,26 @@ function openFrontend() { window.open('/simnook/', '_blank', 'noopener,noreferre
    <div v-show="formTab === 'basic'">
     <FormKit name="carrier" type="select" :label="t('运营商')" :placeholder="t('选择或输入运营商')" :options="withExisting(BUILTIN_CARRIERS.map(item => item.name), form.carrier)" searchable allow-create clearable />
     <VSpace v-if="logoPreview" spacing="md" class="mb-4"><VAvatar :src="logoPreview" :alt="t('运营商图标预览')" size="md" /><span class="text-sm text-gray-500">{{ t('已匹配运营商图标，可在更多设置中更换。') }}</span></VSpace>
-    <FormKit name="number" type="text" :label="t('完整号码（私有）')" :help="t('填写国际格式，如 +85255550123。')" />
-    <FormKit name="countryName" type="select" :label="t('号码国家')" :placeholder="t('选择号码国家')" :options="withExisting(countries, form.countryName)" searchable allow-create clearable :help="t('自定义地区请用「国旗 emoji + 空格 + 名称」，用于地图定位。')" />
-    <FormKit name="typeKind" type="select" :label="t('卡片类型')" :placeholder="t('选择卡片类型')" :options="typeOptions" clearable />
-    <FormKit name="name" type="text" :label="t('展示名称（公开）')" validation="required|length:1,100" :help="t('自动生成「运营商 · 号码末四位」，可以修改。')" />
+    <div class="simnook-form-grid grid grid-cols-1 gap-x-4 md:grid-cols-2">
+     <FormKit name="number" type="text" :label="t('完整号码（私有）')" :help="t('填写国际格式，如 +85255550123。')" />
+     <FormKit name="countryName" type="select" :label="t('号码国家')" :placeholder="t('选择号码国家')" :options="withExisting(countries, form.countryName)" searchable allow-create clearable :help="t('自定义地区请用「国旗 emoji + 空格 + 名称」，用于地图定位。')" />
+     <FormKit name="typeKind" type="select" :label="t('卡片类型')" :placeholder="t('选择卡片类型')" :options="typeOptions" clearable />
+     <FormKit name="name" type="text" :label="t('展示名称（公开）')" validation="required|length:1,100" :help="t('自动生成「运营商 · 号码末四位」，可以修改。')" />
+    </div>
    </div>
    <div v-show="formTab === 'renewal'">
     <FormKit name="keepAlive" type="select" :label="t('保号动作')" :options="withExisting(keepAliveOptions, ...(form.keepAlive ?? []))" multiple searchable allow-create />
     <FormKit :model-value="cycle" type="select" :label="t('续费周期')" :placeholder="t('选择续费周期')" :options="CYCLE_OPTIONS.map(option => ({ ...option, label: t(option.label) }))" :ignore="true" clearable @update:model-value="selectCycle" />
-    <template v-if="cycle === 'custom'">
-     <FormKit name="cycleDays" type="number" :label="t('续费周期（天）')" validation="min:0" min="0" step="1" preserve />
-     <FormKit name="cycleLabel" type="text" :label="t('周期说明')" preserve />
-    </template>
-    <template v-else>
+    <div class="simnook-form-grid grid grid-cols-1 gap-x-4 md:grid-cols-2">
+     <FormKit v-if="cycle === 'custom'" name="cycleDays" type="number" :label="t('续费周期（天）')" validation="min:0" min="0" step="1" preserve />
+     <FormKit v-if="cycle === 'custom'" name="cycleLabel" type="text" :label="t('周期说明')" preserve />
+     <FormKit name="price" type="number" :label="t('续费价格')" validation="min:0" min="0" step="0.01" />
+     <FormKit name="currency" type="select" :label="t('续费币种')" :placeholder="t('选择续费币种')" :options="withExisting(currencies, form.currency)" searchable allow-create clearable validation="matches:/^[A-Z]{3}$/" :help="t('新增时按号码国家推荐币种，可以修改。')" />
+    </div>
+    <template v-if="cycle !== 'custom'">
      <FormKit name="cycleDays" type="hidden" :value="form.cycleDays" preserve />
      <FormKit name="cycleLabel" type="hidden" :value="form.cycleLabel" preserve />
     </template>
-    <FormKit name="price" type="number" :label="t('续费价格')" validation="min:0" min="0" step="0.01" />
-    <FormKit name="currency" type="select" :label="t('续费币种')" :placeholder="t('选择续费币种')" :options="withExisting(currencies, form.currency)" searchable allow-create clearable validation="matches:/^[A-Z]{3}$/" :help="t('新增时按号码国家推荐币种，可以修改。')" />
     <FormKit name="records" type="array" :label="t('消费记录')" :max="1000" :item-labels="recordLabels">
      <template #default="{ value }">
       <ExpenseFields :record="value ?? {}" :initialize="Boolean(value)" :card="form" :types="withExisting(recordTypes, ...(form.records ?? []).map(record => record.type)).map(option => ({ ...option, label: recordTypeLabel(option.value) }))" :currencies="withExisting(currencies, ...(form.records ?? []).map(record => record.currency))" />
@@ -297,23 +310,33 @@ function openFrontend() { window.open('/simnook/', '_blank', 'noopener,noreferre
     </FormKit>
    </div>
    <div v-show="formTab === 'more'">
-   <FormKit name="typeColor" type="select" :label="t('类型图标颜色')" :placeholder="t('随卡片类型')" :options="typeColors" clearable />
-   <FormKit v-if="editing?.spec.typeLabel" name="typeLabel" type="text" :label="t('具体卡片类型（私有）')" />
-   <FormKit v-model="builtinLogo" type="select" :label="t('内置运营商图标')" :placeholder="t('按运营商自动匹配')" :options="builtinLogoOptions" :ignore="true" clearable />
-   <FormKit name="logo" type="attachment" :label="t('自定义运营商图标')" :help="t('选择或上传后优先使用此图标。')" />
-   <FormKit v-if="editing?.spec.expiresAt" name="expiresAt" type="date" :label="t('有效期（旧版手填）')" :help="t('清空后，按交易日期最近一条填写了延长日期的记录计算，同日取最晚。')" />
-   <FormKit v-if="editing?.spec.firstPurchaseAt" name="firstPurchaseAt" type="date" :label="t('首次购买日期（旧版手填）')" :help="t('清空后取最早一笔消费日期。')" />
-   <FormKit name="nextRenewalAt" type="date" :label="t('下次续费起始日')" :help="t('留空时跟随有效期。')" />
-   <FormKit name="nextRenewalEnd" type="date" :label="t('续费截止日')" :help="t('可选。填写后，前台显示续费日期区间。')" />
-   <FormKit v-if="editing?.spec.cancelled" name="cancelled" type="checkbox" :label="t('已注销（旧版标记）')" />
-   <FormKit name="cancelledAt" type="date" :label="t('停用日期')" :help="t('填写后自动标记为已注销。')" />
-   <FormKit name="balance" type="number" :label="t('余额（私有）')" step="0.01" />
-   <FormKit name="balanceUpdatedAt" type="date" :label="t('余额更新日期（私有）')" />
-   <FormKit name="device" type="select" :label="t('主要使用设备（私有）')" :placeholder="t('选择主要使用设备')" :options="withExisting(devices, form.device)" searchable allow-create clearable />
-   <FormKit name="account" type="text" :label="t('账户名称（私有）')" :help="t('仅记录名称，不存储密码、密钥或令牌。')" />
-   <FormKit name="services" type="select" :label="t('绑定的服务（私有）')" :options="withExisting(services, ...(form.services ?? []))" multiple searchable allow-create />
-   <FormKit v-if="editing?.spec.dataCheck" name="dataCheck" type="textarea" :label="t('旧版数据检查备注（私有）')" />
-   <FormKit name="order" type="number" :label="t('展示排序')" step="1" />
+    <!-- 按使用频率分组：续费日期最常改，外观最少改。 -->
+    <h3 class="mb-2 text-sm font-semibold">{{ t('续费与停用') }}</h3>
+    <div class="simnook-form-grid grid grid-cols-1 gap-x-4 md:grid-cols-2">
+     <FormKit name="nextRenewalAt" type="date" :label="t('下次续费起始日')" :help="t('留空时跟随有效期。')" />
+     <FormKit name="nextRenewalEnd" type="date" :label="t('续费截止日')" :help="t('可选。填写后，前台显示续费日期区间。')" />
+     <FormKit v-if="editing?.spec.expiresAt" name="expiresAt" type="date" :label="t('有效期（旧版手填）')" :help="t('清空后，按交易日期最近一条填写了延长日期的记录计算，同日取最晚。')" />
+     <FormKit v-if="editing?.spec.firstPurchaseAt" name="firstPurchaseAt" type="date" :label="t('首次购买日期（旧版手填）')" :help="t('清空后取最早一笔消费日期。')" />
+     <FormKit name="cancelledAt" type="date" :label="t('停用日期')" :help="t('填写后自动标记为已注销。')" />
+    </div>
+    <FormKit v-if="editing?.spec.cancelled" name="cancelled" type="checkbox" :label="t('已注销（旧版标记）')" />
+    <h3 class="mb-2 mt-2 border-t pt-4 text-sm font-semibold">{{ t('私有信息') }}</h3>
+    <div class="simnook-form-grid grid grid-cols-1 gap-x-4 md:grid-cols-2">
+     <FormKit name="balance" type="number" :label="t('余额（私有）')" step="0.01" />
+     <FormKit name="balanceUpdatedAt" type="date" :label="t('余额更新日期（私有）')" />
+     <FormKit name="device" type="select" :label="t('主要使用设备（私有）')" :placeholder="t('选择主要使用设备')" :options="withExisting(devices, form.device)" searchable allow-create clearable />
+     <FormKit name="account" type="text" :label="t('账户名称（私有）')" :help="t('仅记录名称，不存储密码、密钥或令牌。')" />
+    </div>
+    <FormKit name="services" type="select" :label="t('绑定的服务（私有）')" :options="withExisting(services, ...(form.services ?? []))" multiple searchable allow-create />
+    <FormKit v-if="editing?.spec.typeLabel" name="typeLabel" type="text" :label="t('具体卡片类型（私有）')" />
+    <FormKit v-if="editing?.spec.dataCheck" name="dataCheck" type="textarea" :label="t('旧版数据检查备注（私有）')" />
+    <h3 class="mb-2 mt-2 border-t pt-4 text-sm font-semibold">{{ t('外观与排序') }}</h3>
+    <div class="simnook-form-grid grid grid-cols-1 gap-x-4 md:grid-cols-2">
+     <FormKit name="typeColor" type="select" :label="t('类型图标颜色')" :placeholder="t('随卡片类型')" :options="typeColors" clearable />
+     <FormKit v-model="builtinLogo" type="select" :label="t('内置运营商图标')" :placeholder="t('按运营商自动匹配')" :options="builtinLogoOptions" :ignore="true" clearable />
+     <FormKit name="order" type="number" :label="t('展示排序')" step="1" />
+    </div>
+    <FormKit name="logo" type="attachment" :label="t('自定义运营商图标')" :help="t('选择或上传后优先使用此图标。')" />
    </div>
   </FormKit>
   <template #footer><VButton type="secondary" :loading="saving" :disabled="conflict" @click="submit">{{ t('保存') }}</VButton></template>
@@ -321,7 +344,7 @@ function openFrontend() { window.open('/simnook/', '_blank', 'noopener,noreferre
  <VModal v-if="check" :title="`${check.name} · ${t('数据检查')}`" :width="640" mount-to-body @close="check = undefined">
   <VEntityContainer>
    <VEntity>
-    <template #start><VEntityField :title="`${check.statusLabel} · ${check.urgency}`" :description="check.dataCheck || t('号卡没有检查提示')" /></template>
+    <template #start><VEntityField :title="`${check.statusLabel} · ${urgencyText(check)}`" :description="check.dataCheck || t('号卡没有检查提示')" /></template>
    </VEntity>
    <VEntity v-for="record in check.history?.filter(item => item.checks?.length)" :key="record.id">
     <template #start><VEntityField :title="record.title?.trim() || [record.date, recordTypeLabel(record.type)].map(value => value?.trim()).filter(Boolean).join(' · ') || t('未命名消费记录')" :description="record.checks?.join(locale.startsWith('zh') ? '；' : '; ')" /></template>
@@ -329,3 +352,8 @@ function openFrontend() { window.open('/simnook/', '_blank', 'noopener,noreferre
   </VEntityContainer>
  </VModal>
 </template>
+
+<style>
+/* FormKit 的 first:pt-0 / last:pb-0 只认 DOM 首尾，并排时会让同一行字段上下错位，统一内边距。 */
+.simnook-form-grid > .formkit-outer { padding-top: 0; padding-bottom: 1rem; }
+</style>

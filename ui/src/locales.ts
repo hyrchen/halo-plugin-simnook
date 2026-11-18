@@ -38,6 +38,7 @@ const en = {
  '查看字段差异': 'View field differences', '当前数据': 'Current data', '备份数据': 'Backup data', '业务字段一致': 'Business fields are identical', '恢复结果': 'Restore results', '重新预览': 'Preview again',
  '分页总数': '{count} items', '页': 'page', '条 / 页': 'per page',
  '号卡': 'Cards', '基本信息': 'Basic information', '续费与消费': 'Renewal and expenses', '更多设置': 'More settings',
+ '续费与停用': 'Renewal and deactivation', '私有信息': 'Private details', '外观与排序': 'Appearance and order',
  '实体 SIM': 'Physical SIM', 'eSIM · 直写手机': 'eSIM · built into phone', 'eSIM · 卡托': 'eSIM · adapter', '虚拟号码（仅 App）': 'Virtual number (app only)',
  '中性（默认）': 'Neutral (default)', '灰色': 'Gray', '棕色': 'Brown', '橙色': 'Orange', '黄色': 'Yellow', '绿色': 'Green', '蓝色': 'Blue', '紫色': 'Purple', '粉色': 'Pink', '红色': 'Red',
  '充值余额': 'Top up balance', '购买/启用增值服务': 'Buy or enable an add-on', '有效使用（含收发短信）': 'Regular use (incl. SMS)', '产生余额变动（如发漫游短信）': 'Balance change (e.g. roaming SMS)', '自动扣费': 'Auto-charge', '购买续费套餐': 'Buy a renewal plan',
