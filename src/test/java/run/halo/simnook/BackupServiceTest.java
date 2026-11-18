@@ -16,21 +16,18 @@ import reactor.core.publisher.Mono;
 import run.halo.app.extension.Metadata;
 import run.halo.app.extension.ReactiveExtensionClient;
 import run.halo.app.plugin.PluginContext;
-import run.halo.app.plugin.ReactiveSettingFetcher;
 
 class BackupServiceTest {
     @Test
     void cardCsvUsesDerivedExpiryAndRenewalDates() {
         var client = mock(ReactiveExtensionClient.class);
-        var settings = mock(ReactiveSettingFetcher.class);
         var card = card("csv-card");
         var row = record("r", "1");
         row.setDate("2026-11-08");
         row.setExtendsTo("2026-12-08");
         card.getSpec().setRecords(List.of(row));
         when(client.list(eq(SimCard.class), isNull(), any())).thenReturn(Flux.just(card));
-        when(settings.getSettingValues()).thenReturn(Mono.just(Map.of()));
-        var csv = new BackupService(client, mock(PluginContext.class), settings)
+        var csv = new BackupService(client, mock(PluginContext.class))
                 .csv("cards")
                 .block(Duration.ofSeconds(3));
         assertThat(csv).contains("\"2026-12-08\",\"2026-12-08\"");
@@ -150,7 +147,7 @@ class BackupServiceTest {
                         new RestoreDecision("SimCard", "a", "create", null),
                         new RestoreDecision("SimCard", "b", "create", null),
                         new RestoreDecision("SimCard", "c", "create", null)));
-        var result = new BackupService(client, mock(PluginContext.class), mock(ReactiveSettingFetcher.class))
+        var result = new BackupService(client, mock(PluginContext.class))
                 .restore(request)
                 .block(Duration.ofSeconds(3));
         assertThat(result.items()).extracting(RestoreItem::status).containsExactly("success", "failed", "pending");

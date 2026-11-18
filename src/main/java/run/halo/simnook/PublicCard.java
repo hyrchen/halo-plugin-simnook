@@ -135,33 +135,138 @@ public record PublicCard(
                 history);
     }
 
-    /** 默认私有、可按号卡单独公开的字段。新增字段时同步 SimCard 的 allowableValues 和后台可见性选项。 */
-    static final List<String> OPTIONAL_PUBLIC_FIELDS =
-            List.of("number", "type", "device", "balance", "account", "services");
+    /**
+     * 号卡可公开字段的完整清单，顺序即后台展示顺序。publicFields 为空值时取 {@link #DEFAULT_PUBLIC_FIELDS}， 与早期版本访客可见的内容一致；空列表表示全部私有。新增字段时同步
+     * SimCard 的 allowableValues 和后台选项。
+     */
+    static final List<String> PUBLIC_FIELDS = List.of(
+            "name",
+            "carrier",
+            "last4",
+            "number",
+            "country",
+            "type",
+            "keepAlive",
+            "cycle",
+            "price",
+            "dates",
+            "firstPurchase",
+            "history",
+            "device",
+            "balance",
+            "account",
+            "services");
 
-    /** 匿名访客视图：白名单基础字段，再按号卡设置追加用户选择公开的字段。 */
+    static final List<String> DEFAULT_PUBLIC_FIELDS = List.of(
+            "name",
+            "carrier",
+            "last4",
+            "country",
+            "type",
+            "keepAlive",
+            "cycle",
+            "price",
+            "dates",
+            "firstPurchase",
+            "history");
+
+    static List<String> publicFields(SimCard.CardSpec spec) {
+        var chosen = spec.getPublicFields() == null ? DEFAULT_PUBLIC_FIELDS : spec.getPublicFields();
+        return PUBLIC_FIELDS.stream().filter(chosen::contains).toList();
+    }
+
+    /** 匿名访客视图：只保留号卡公开列表中的字段，未公开的字段置空，前台按 publicFields 显示「登录后可见」。 */
     static Map<String, Object> visitorView(SimCard card, LocalDate today, int sourceOrder, Locale locale) {
         var spec = card.getSpec();
-        var selected = spec.getPublicFields() == null
-                ? List.<String>of()
-                : OPTIONAL_PUBLIC_FIELDS.stream()
-                        .filter(spec.getPublicFields()::contains)
-                        .toList();
+        var selected = publicFields(spec);
         Map<String, Object> view = JSON.convertValue(from(card, today, sourceOrder), new TypeReference<>() {});
-        for (var field : selected) {
+        for (var field : PUBLIC_FIELDS) {
+            var shown = selected.contains(field);
             switch (field) {
-                case "number" -> view.put("number", text(spec.getNumber()));
-                case "type" -> view.put("type", CardFacts.typeText(spec, locale));
-                case "device" -> view.put("device", spec.getDevice());
-                case "balance" -> {
-                    view.put("balance", spec.getBalance());
-                    view.put("balanceUpdatedAt", CardFacts.date(spec.getBalanceUpdatedAt()));
+                case "name", "number" -> {
+                    // 名称依赖末四位的隐藏结果，在循环后统一处理。
+                    if (shown && "number".equals(field)) view.put("number", text(spec.getNumber()));
                 }
-                case "account" -> view.put("account", spec.getAccount());
-                case "services" -> view.put("services", spec.getServices() == null ? List.of() : spec.getServices());
+                case "carrier" -> {
+                    if (!shown) {
+                        view.put("carrier", "");
+                        view.put("logo", null);
+                    }
+                }
+                case "last4" -> {
+                    if (!shown) {
+                        view.put("last4", "");
+                        view.put("numberMasked", "••••");
+                    }
+                }
+                case "country" -> {
+                    if (!shown) {
+                        view.put("region", "");
+                        view.put("countryName", "");
+                    }
+                }
+                case "type" -> {
+                    if (shown) view.put("type", CardFacts.typeText(spec, locale));
+                    else {
+                        view.put("typeKind", null);
+                        view.put("typeColor", "default");
+                    }
+                }
+                case "keepAlive" -> {
+                    if (!shown) {
+                        view.put("keepAlive", List.of());
+                        view.put("keepAliveCodes", List.of());
+                    }
+                }
+                case "cycle" -> {
+                    if (!shown) {
+                        view.put("cycleDays", 0);
+                        view.put("cycleLabel", "");
+                    }
+                }
+                case "price" -> {
+                    // 保持数值类型以兼容前台类型定义，前台按 publicFields 显示「登录后可见」。
+                    if (!shown) view.put("price", 0);
+                }
+                case "dates" -> {
+                    if (!shown) {
+                        for (var key : List.of(
+                                "expiresAt",
+                                "nextRenewalAt",
+                                "nextRenewalEnd",
+                                "periodStart",
+                                "cancelledAt",
+                                "urgency")) view.put(key, null);
+                    }
+                }
+                case "firstPurchase" -> {
+                    if (!shown) view.put("firstPurchaseAt", null);
+                }
+                case "history" -> {
+                    if (!shown) {
+                        view.put("history", List.of());
+                        view.put("totalSpentCNY", null);
+                    }
+                }
+                case "device" -> {
+                    if (shown) view.put("device", spec.getDevice());
+                }
+                case "balance" -> {
+                    if (shown) {
+                        view.put("balance", spec.getBalance());
+                        view.put("balanceUpdatedAt", CardFacts.date(spec.getBalanceUpdatedAt()));
+                    }
+                }
+                case "account" -> {
+                    if (shown) view.put("account", spec.getAccount());
+                }
+                case "services" -> {
+                    if (shown) view.put("services", spec.getServices() == null ? List.of() : spec.getServices());
+                }
                 default -> throw new IllegalStateException(field);
             }
         }
+        if (!selected.contains("name")) view.put("name", view.get("numberMasked"));
         view.put("publicFields", selected);
         return view;
     }

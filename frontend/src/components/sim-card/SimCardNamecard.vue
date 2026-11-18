@@ -30,7 +30,7 @@ const { daysClass, daysText, inactive, inactiveClass, inactiveDate, inactiveLabe
       <div class="mt-3.5 flex max-w-full items-center gap-2">
         <StatusDot :status="props.card.status" />
         <div class="truncate text-base font-bold">
-          {{ props.card.carrier }}
+          {{ props.card.carrier || props.card.name }}
         </div>
       </div>
       <div class="mt-0.5 max-w-full truncate text-[11px] text-muted-foreground">

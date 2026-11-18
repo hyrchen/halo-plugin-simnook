@@ -34,7 +34,7 @@ const dialNumber = computed(() => {
         <div class="flex min-w-0 items-center gap-2">
           <StatusDot :status="props.card.status" />
           <div class="truncate text-base font-bold">
-            {{ props.card.carrier }}
+            {{ props.card.carrier || props.card.name }}
           </div>
         </div>
         <div class="mt-0.5 truncate text-[11px] text-muted-foreground">

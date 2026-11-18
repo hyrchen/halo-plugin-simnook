@@ -3,7 +3,9 @@ package run.halo.simnook;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.ZonedDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
@@ -25,7 +27,6 @@ import run.halo.app.infra.ExternalLinkProcessor;
 import run.halo.app.notification.NotificationCenter;
 import run.halo.app.notification.NotificationReasonEmitter;
 import run.halo.app.notification.UserIdentity;
-import run.halo.app.plugin.ReactiveSettingFetcher;
 
 @Slf4j
 @Component
@@ -33,7 +34,6 @@ public class ReminderService {
     static final String REASON = "simnook-channel-reminder";
     static final Set<String> EVENTS = Set.of("upcoming", "window", "overdue");
     private final ReactiveExtensionClient client;
-    private final ReactiveSettingFetcher settings;
     private final NotificationCenter notifications;
     private final NotificationReasonEmitter emitter;
     private final RoleService roles;
@@ -44,24 +44,21 @@ public class ReminderService {
     @Autowired
     public ReminderService(
             ReactiveExtensionClient client,
-            ReactiveSettingFetcher settings,
             NotificationCenter notifications,
             NotificationReasonEmitter emitter,
             RoleService roles,
             ExternalLinkProcessor links) {
-        this(client, settings, notifications, emitter, roles, links, Clock.systemUTC());
+        this(client, notifications, emitter, roles, links, Clock.systemUTC());
     }
 
     ReminderService(
             ReactiveExtensionClient client,
-            ReactiveSettingFetcher settings,
             NotificationCenter notifications,
             NotificationReasonEmitter emitter,
             RoleService roles,
             ExternalLinkProcessor links,
             Clock clock) {
         this.client = client;
-        this.settings = settings;
         this.notifications = notifications;
         this.emitter = emitter;
         this.roles = roles;
@@ -76,6 +73,10 @@ public class ReminderService {
             boolean enabled,
             List<String> recipients,
             List<String> events,
+            String sendTime,
+            String cardScope,
+            List<String> cards,
+            List<Integer> daysAhead,
             Long version) {}
 
     @Schema(name = "ReminderChannelView")
@@ -85,7 +86,12 @@ public class ReminderService {
             boolean enabled,
             List<String> recipients,
             List<String> events,
+            String sendTime,
+            String cardScope,
+            List<String> cards,
+            List<Integer> daysAhead,
             Long version,
+            String nextRunAt,
             String lastSubmittedAt,
             String lastError,
             String lastTestAt,
@@ -94,41 +100,36 @@ public class ReminderService {
     @Schema(name = "ReminderRecipient")
     public record Recipient(String name, String displayName) {}
 
+    @Schema(name = "ReminderCardOption")
+    public record CardOption(String name, String displayName) {}
+
     @Schema(name = "ReminderChannelsView")
-    public record ChannelsView(
-            List<ChannelView> channels,
-            List<Recipient> recipients,
-            String sendTime,
-            String timezone,
-            int daysAhead,
-            String nextRunAt) {}
+    public record ChannelsView(List<ChannelView> channels, List<Recipient> recipients, List<CardOption> cards) {}
+
+    static final String DEFAULT_SEND_TIME = "09:00";
+    static final List<Integer> DEFAULT_DAYS = List.of(7, 3, 1);
+    private static final java.util.regex.Pattern TIME =
+            java.util.regex.Pattern.compile("(?:[01][0-9]|2[0-3]):[0-5][0-9]");
 
     Mono<ChannelsView> view() {
-        return settings.getSettingValues()
-                .map(RenewalSettings::from)
-                .flatMap(schedule -> channels()
-                        .map(ReminderService::viewOf)
-                        .collectList()
-                        .zipWith(client.list(User.class, ReminderService::activeUser, null)
-                                .filterWhen(user -> canManage(user.getMetadata().getName()))
-                                .map(user -> new Recipient(
-                                        user.getMetadata().getName(),
-                                        user.getSpec().getDisplayName()))
-                                .collectList())
-                        .map(pair -> {
-                            var now = ZonedDateTime.now(clock.withZone(schedule.zone()));
-                            var next = now.toLocalDate()
-                                    .atTime(schedule.sendTime())
-                                    .atZone(schedule.zone());
-                            if (!next.isAfter(now)) next = next.plusDays(1);
-                            return new ChannelsView(
-                                    pair.getT1(),
-                                    pair.getT2(),
-                                    schedule.sendTime().toString(),
-                                    schedule.zone().getId(),
-                                    schedule.daysAhead(),
-                                    next.toInstant().toString());
-                        }));
+        var now = ZonedDateTime.now(clock.withZone(RenewalSettings.ZONE));
+        return channels()
+                .map(channel -> viewOf(channel, now))
+                .collectList()
+                .zipWith(client.list(User.class, ReminderService::activeUser, null)
+                        .filterWhen(user -> canManage(user.getMetadata().getName()))
+                        .map(user -> new Recipient(
+                                user.getMetadata().getName(), user.getSpec().getDisplayName()))
+                        .collectList())
+                .zipWith(client.list(
+                                SimCard.class,
+                                card -> card.getMetadata().getDeletionTimestamp() == null,
+                                PublicCard.SOURCE_ORDER)
+                        .map(card -> new CardOption(
+                                card.getMetadata().getName(), card.getSpec().getName()))
+                        .collectList())
+                .map(result ->
+                        new ChannelsView(result.getT1().getT1(), result.getT1().getT2(), result.getT2()));
     }
 
     private Flux<ReminderChannel> channels() {
@@ -138,15 +139,41 @@ public class ReminderService {
                 Comparator.comparing(channel -> channel.getMetadata().getName()));
     }
 
+    /** 旧渠道没有这些字段，读取时补默认值：09:00、全部号卡、提前 7/3/1 天。 */
+    static String sendTime(ReminderChannel.Spec spec) {
+        return spec.getSendTime() != null && TIME.matcher(spec.getSendTime()).matches()
+                ? spec.getSendTime()
+                : DEFAULT_SEND_TIME;
+    }
+
+    static boolean allCards(ReminderChannel.Spec spec) {
+        return !"selected".equals(spec.getCardScope());
+    }
+
+    static List<Integer> daysAhead(ReminderChannel.Spec spec) {
+        return spec.getDaysAhead() == null || spec.getDaysAhead().isEmpty() ? DEFAULT_DAYS : spec.getDaysAhead();
+    }
+
     static ChannelView viewOf(ReminderChannel channel) {
+        return viewOf(channel, ZonedDateTime.now(RenewalSettings.ZONE));
+    }
+
+    static ChannelView viewOf(ReminderChannel channel, ZonedDateTime now) {
         var spec = channel.getSpec();
+        var next = now.toLocalDate().atTime(LocalTime.parse(sendTime(spec))).atZone(RenewalSettings.ZONE);
+        if (!next.isAfter(now)) next = next.plusDays(1);
         return new ChannelView(
                 channel.getMetadata().getName(),
                 spec.getDisplayName(),
                 spec.isEnabled(),
                 spec.getRecipients(),
                 spec.getEvents(),
+                sendTime(spec),
+                allCards(spec) ? "all" : "selected",
+                spec.getCards() == null ? List.of() : spec.getCards(),
+                daysAhead(spec),
                 channel.getMetadata().getVersion(),
+                next.toInstant().toString(),
                 spec.getLastSubmittedAt(),
                 spec.getLastError(),
                 spec.getLastTestAt(),
@@ -159,8 +186,9 @@ public class ReminderService {
                 .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "渠道不存在")));
     }
 
-    Mono<ChannelView> save(ChannelInput input) {
+    Mono<ChannelView> save(ChannelInput raw) {
         return Mono.defer(() -> {
+            var input = normalized(raw);
             validate(input);
             var name = input.name() == null ? "channel-" + UUID.randomUUID() : input.name();
             return exclusive(
@@ -191,6 +219,13 @@ public class ReminderService {
                                 spec.setEnabled(input.enabled());
                                 spec.setRecipients(List.copyOf(input.recipients()));
                                 spec.setEvents(List.copyOf(input.events()));
+                                spec.setSendTime(input.sendTime());
+                                spec.setCardScope(input.cardScope());
+                                spec.setCards(
+                                        "selected".equals(input.cardScope()) ? List.copyOf(input.cards()) : List.of());
+                                spec.setDaysAhead(input.daysAhead().stream()
+                                        .sorted(Comparator.reverseOrder())
+                                        .toList());
                                 spec.getSubmittedDates().keySet().retainAll(input.recipients());
                                 // 编辑或启停不覆盖用户的退订选择，仅为新接收人建立订阅。
                                 return Flux.fromIterable(input.recipients())
@@ -224,6 +259,43 @@ public class ReminderService {
                 || input.events().stream().anyMatch(event -> event == null || !EVENTS.contains(event))
                 || input.events().stream().distinct().count() != input.events().size())
             throw BackupService.bad("请填写渠道名称、1 至 50 位不同接收用户及有效提醒范围");
+        if (input.sendTime() == null || !TIME.matcher(input.sendTime()).matches())
+            throw BackupService.bad("发送时间必须为 HH:mm");
+        if (!"all".equals(input.cardScope()) && !"selected".equals(input.cardScope()))
+            throw BackupService.bad("请选择提醒全部号卡或指定号卡");
+        if ("selected".equals(input.cardScope())
+                && (input.cards() == null
+                        || input.cards().isEmpty()
+                        || input.cards().size() > 1000
+                        || input.cards().stream().anyMatch(card -> card == null || card.isBlank())
+                        || input.cards().stream().distinct().count()
+                                != input.cards().size())) throw BackupService.bad("请至少选择一张号卡");
+        if (input.events().contains("upcoming")
+                && (input.daysAhead() == null
+                        || input.daysAhead().isEmpty()
+                        || input.daysAhead().size() > 20
+                        || input.daysAhead().stream().anyMatch(day -> day == null || day < 0 || day > 365)
+                        || input.daysAhead().stream().distinct().count()
+                                != input.daysAhead().size())) throw BackupService.bad("请选择有效的提前提醒天数");
+    }
+
+    /** 前端可能省略未展示的可选字段，统一补齐后再校验；只关心逾期或窗口时天数可留空。 */
+    static ChannelInput normalized(ChannelInput input) {
+        var upcoming = input.events() != null && input.events().contains("upcoming");
+        var days = input.daysAhead() == null || input.daysAhead().isEmpty() && !upcoming
+                ? DEFAULT_DAYS
+                : input.daysAhead();
+        return new ChannelInput(
+                input.name(),
+                input.displayName(),
+                input.enabled(),
+                input.recipients(),
+                input.events(),
+                input.sendTime() == null ? DEFAULT_SEND_TIME : input.sendTime(),
+                input.cardScope() == null ? "all" : input.cardScope(),
+                input.cards() == null ? List.of() : input.cards(),
+                days,
+                input.version());
     }
 
     Mono<Void> delete(String name, Long version) {
@@ -271,49 +343,52 @@ public class ReminderService {
 
     @Scheduled(fixedDelay = 60_000, initialDelay = 10_000)
     public Mono<Void> check() {
-        return Mono.defer(() -> settings.getSettingValues()
-                        .map(RenewalSettings::from)
-                        .flatMap(schedule -> {
-                            var now = ZonedDateTime.now(clock.withZone(schedule.zone()));
-                            if (now.toLocalTime().isBefore(schedule.sendTime())) return Mono.empty();
-                            var today = now.toLocalDate();
-                            return client.list(
-                                            SimCard.class,
-                                            card -> card.getMetadata().getDeletionTimestamp() == null,
-                                            PublicCard.SOURCE_ORDER)
-                                    .filter(card -> schedule.includes(CardFacts.from(card.getSpec(), today), today))
-                                    .collectList()
-                                    .filter(cards -> !cards.isEmpty())
-                                    .flatMap(cards -> channels()
-                                            .filter(channel -> channel.getSpec().isEnabled())
-                                            .concatMap(channel -> exclusive(
-                                                            channel.getMetadata()
-                                                                    .getName(),
-                                                            () -> get(channel.getMetadata()
-                                                                            .getName())
-                                                                    .filter(latest -> latest.getSpec()
-                                                                            .isEnabled())
-                                                                    .flatMap(latest -> deliver(latest, cards, today)))
-                                                    .onErrorResume(error -> {
-                                                        log.error(
-                                                                "SIMnook 渠道检查失败：{}",
-                                                                channel.getMetadata()
-                                                                        .getName(),
-                                                                error);
-                                                        return Mono.empty();
-                                                    }))
-                                            .then());
-                        }))
+        return Mono.defer(() -> {
+                    var now = ZonedDateTime.now(clock.withZone(RenewalSettings.ZONE));
+                    var today = now.toLocalDate();
+                    return client.list(
+                                    SimCard.class,
+                                    card -> card.getMetadata().getDeletionTimestamp() == null,
+                                    PublicCard.SOURCE_ORDER)
+                            .collectList()
+                            .flatMap(cards -> channels()
+                                    // 每个渠道按自己的发送时间触发，未到时间的渠道本轮跳过。
+                                    .filter(channel -> channel.getSpec().isEnabled()
+                                            && !now.toLocalTime()
+                                                    .isBefore(LocalTime.parse(sendTime(channel.getSpec()))))
+                                    .concatMap(channel -> exclusive(
+                                                    channel.getMetadata().getName(),
+                                                    () -> get(channel.getMetadata()
+                                                                    .getName())
+                                                            .filter(latest -> latest.getSpec()
+                                                                    .isEnabled())
+                                                            .flatMap(latest -> deliver(latest, cards, today)))
+                                            .onErrorResume(error -> {
+                                                log.error(
+                                                        "SIMnook 渠道检查失败：{}",
+                                                        channel.getMetadata().getName(),
+                                                        error);
+                                                return Mono.empty();
+                                            }))
+                                    .then());
+                })
                 .doOnError(error -> log.error("SIMnook 续费提醒检查失败", error))
                 .onErrorComplete();
     }
 
+    /** 判断号卡今天是否需要通过该渠道提醒： 逾期、续费窗口开放按勾选的类型每天提醒；即将到期只在距续费起始日恰好为勾选天数的那天提醒。 */
     static boolean matches(ReminderChannel channel, SimCard card, LocalDate today) {
+        var spec = channel.getSpec();
+        if (!allCards(spec)
+                && (spec.getCards() == null
+                        || !spec.getCards().contains(card.getMetadata().getName()))) return false;
         var facts = CardFacts.from(card.getSpec(), today);
         var urgency = CardFacts.urgencyCode(facts.status(), facts.renewal(), facts.renewalEnd(), today);
         if ("cancelled".equals(urgency) || "noDate".equals(urgency)) return false;
-        var event = "overdue".equals(urgency) ? "overdue" : "window".equals(urgency) ? "window" : "upcoming";
-        return channel.getSpec().getEvents().contains(event);
+        if ("overdue".equals(urgency) || "window".equals(urgency))
+            return spec.getEvents().contains(urgency);
+        var days = ChronoUnit.DAYS.between(today, LocalDate.parse(facts.renewal()));
+        return spec.getEvents().contains("upcoming") && daysAhead(spec).contains((int) days);
     }
 
     Mono<Void> deliver(ReminderChannel channel, List<SimCard> allCards, LocalDate today) {

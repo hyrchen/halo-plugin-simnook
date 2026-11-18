@@ -52,10 +52,40 @@ export interface ReminderChannelView {
     'events'?: Array<string>;
     /**
      * 
+     * @type {string}
+     * @memberof ReminderChannelView
+     */
+    'sendTime'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof ReminderChannelView
+     */
+    'cardScope'?: string;
+    /**
+     * 
+     * @type {Array<string>}
+     * @memberof ReminderChannelView
+     */
+    'cards'?: Array<string>;
+    /**
+     * 
+     * @type {Array<number>}
+     * @memberof ReminderChannelView
+     */
+    'daysAhead'?: Array<number>;
+    /**
+     * 
      * @type {number}
      * @memberof ReminderChannelView
      */
     'version'?: number;
+    /**
+     * 
+     * @type {string}
+     * @memberof ReminderChannelView
+     */
+    'nextRunAt'?: string;
     /**
      * 
      * @type {string}

@@ -26,7 +26,7 @@ const flagSrc = computed(() => props.card.region ? getFlagSrc(props.card.region)
     :data-status="props.card.status"
     role="link"
     tabindex="0"
-    :aria-label="`${props.card.carrier} ${props.card.numberMasked}`"
+    :aria-label="`${props.card.carrier || props.card.name} ${props.card.numberMasked}`"
     @click="emit('click')"
     @keydown.enter="emit('click')"
   >

@@ -12,20 +12,33 @@ import run.halo.app.extension.Metadata;
 
 class PublicCardTest {
     @Test
-    void visitorViewOnlyAddsFieldsTheOwnerMadePublic() {
+    void visitorViewFollowsTheCardPublicList() {
         var c = card();
         var today = LocalDate.of(2026, 11, 7);
-        var hidden = PublicCard.visitorView(c, today, 0, Locale.SIMPLIFIED_CHINESE);
-        assertThat(hidden).doesNotContainKeys("number", "type", "device", "balance", "account", "services");
-        assertThat(hidden.toString()).doesNotContain("private-account", "private-device", "13800123456");
-
         c.getSpec().setTypeKind("adapter");
-        c.getSpec().setPublicFields(List.of("type", "number", "unknown"));
-        var shown = PublicCard.visitorView(c, today, 0, Locale.SIMPLIFIED_CHINESE);
-        assertThat(shown.get("type")).isEqualTo("eSIM · 卡托");
-        assertThat(shown.get("number")).isEqualTo("+86 13800123456");
-        assertThat(shown.get("publicFields")).isEqualTo(List.of("number", "type"));
-        assertThat(shown).doesNotContainKeys("device", "balance", "account", "services");
+        c.getSpec().setCountryName("中国");
+        var defaults = PublicCard.visitorView(c, today, 0, Locale.SIMPLIFIED_CHINESE);
+        assertThat(defaults.get("publicFields")).isEqualTo(PublicCard.DEFAULT_PUBLIC_FIELDS);
+        assertThat(defaults.get("type")).isEqualTo("eSIM · 卡托");
+        assertThat(defaults.get("countryName")).isEqualTo("中国");
+        assertThat(defaults).doesNotContainKeys("number", "device", "balance", "account", "services");
+        assertThat(defaults.toString()).doesNotContain("private-account", "private-device", "13800123456");
+
+        c.getSpec().setPublicFields(List.of("number", "device", "unknown"));
+        var custom = PublicCard.visitorView(c, today, 0, Locale.SIMPLIFIED_CHINESE);
+        assertThat(custom.get("publicFields")).isEqualTo(List.of("number", "device"));
+        assertThat(custom.get("number")).isEqualTo("+86 13800123456");
+        assertThat(custom.get("device")).isEqualTo("private-device");
+        assertThat(custom.get("countryName")).isEqualTo("");
+        assertThat(custom.get("typeKind")).isNull();
+        assertThat(custom.get("history")).isEqualTo(List.of());
+        assertThat(custom.get("name")).isEqualTo("••••");
+        assertThat(custom).doesNotContainKeys("type", "balance", "account", "services");
+
+        c.getSpec().setPublicFields(List.of());
+        var none = PublicCard.visitorView(c, today, 0, Locale.SIMPLIFIED_CHINESE);
+        assertThat(none.get("publicFields")).isEqualTo(List.of());
+        assertThat(none.toString()).doesNotContain("测试卡", "13800123456", "3456");
     }
 
     @Test

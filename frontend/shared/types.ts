@@ -12,8 +12,10 @@ export type CardKind = 'physical' | 'adapter' | 'embedded' | 'virtual'
 export type RecordKind = 'purchase' | 'renewal' | 'topup' | 'other'
 
 export type KeepAliveCode = 'topup' | 'addon' | 'use' | 'balanceChange' | 'autoCharge' | 'plan'
-/** 与后端 PublicCard.OPTIONAL_PUBLIC_FIELDS 一致。 */
-export type PublicField = 'number' | 'type' | 'device' | 'balance' | 'account' | 'services'
+/** 与后端 PublicCard.PUBLIC_FIELDS 一致。 */
+export type PublicField
+  = | 'name' | 'carrier' | 'last4' | 'number' | 'country' | 'type' | 'keepAlive' | 'cycle' | 'price' | 'dates'
+    | 'firstPurchase' | 'history' | 'device' | 'balance' | 'account' | 'services'
 export type ErrorParams = Record<string, string | number>
 
 /** Notion select option colors */
@@ -57,7 +59,7 @@ export interface SimCard {
   region: string
   /** Country or region name */
   countryName: string
-  typeKind: CardKind
+  typeKind: CardKind | null
   typeColor: NotionColor
   /** Actions required to keep the number active */
   keepAlive: string[]

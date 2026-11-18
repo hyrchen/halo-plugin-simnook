@@ -52,6 +52,30 @@ export interface ReminderChannelInput {
     'events'?: Array<string>;
     /**
      * 
+     * @type {string}
+     * @memberof ReminderChannelInput
+     */
+    'sendTime'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof ReminderChannelInput
+     */
+    'cardScope'?: string;
+    /**
+     * 
+     * @type {Array<string>}
+     * @memberof ReminderChannelInput
+     */
+    'cards'?: Array<string>;
+    /**
+     * 
+     * @type {Array<number>}
+     * @memberof ReminderChannelInput
+     */
+    'daysAhead'?: Array<number>;
+    /**
+     * 
      * @type {number}
      * @memberof ReminderChannelInput
      */

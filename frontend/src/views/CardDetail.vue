@@ -87,11 +87,14 @@ const metricCards = computed<MetricCard[]>(() => {
   if (!card)
     return []
 
-  const price = card.price > 0
-    ? { value: formatAmount(card.price, card.currency), unit: card.cycleDays > 0 ? `/ ${billingPeriodText(card.cycleDays)}` : undefined }
-    : { value: t('detail.free'), unit: undefined }
+  const priceLocked = isLocked(card, 'price')
+  const price = priceLocked
+    ? { value: lockedHint.value, unit: undefined }
+    : card.price > 0
+      ? { value: formatAmount(card.price, card.currency), unit: card.cycleDays > 0 ? `/ ${billingPeriodText(card.cycleDays)}` : undefined }
+      : { value: t('detail.free'), unit: undefined }
 
-  const monthly = card.cycleDays > 0 && card.price > 0
+  const monthly = !priceLocked && card.cycleDays > 0 && card.price > 0
     ? formatFinanceMetric(financeHelper.calculateMonthlyAverageCostCNY(card, exchangeRates.value), financeBaseCurrency.value)
     : null
 
@@ -125,23 +128,27 @@ const metricCards = computed<MetricCard[]>(() => {
 const numberInfo = computed<InfoItem[]>(() => {
   const card = data.value
   const lockedValue = lockedHint.value
-  const deviceLocked = isLocked(card, 'device')
+  const show = (field: PublicField, value: string | undefined): Pick<InfoItem, 'value' | 'locked'> =>
+    isLocked(card, field) ? { value: lockedValue, locked: true } : { value, locked: false }
   return [
-    { key: 'number', label: t('detail.fields.number'), value: card ? getNumberDisplay(card) : '-', icon: 'tabler:phone', valueClass: 'font-mono' },
-    { key: 'country', label: t('detail.fields.country'), value: card ? countryName(card) || '-' : '-', icon: 'tabler:world' },
-    // 类型代码本就公开；具体文案（含手填类型）未公开时退回到类型代码的译名，与后台同源，不再截掉 eSIM 前缀。
-    { key: 'type', label: t('detail.fields.type'), value: card ? card.type || getKindName(card.typeKind) : '-', icon: 'tabler:device-sim' },
-    { key: 'device', label: t('detail.fields.device'), value: deviceLocked ? lockedValue : card?.device || '-', icon: 'tabler:device-mobile', locked: deviceLocked },
+    { key: 'number', label: t('detail.fields.number'), ...show('last4', card ? getNumberDisplay(card) : '-'), icon: 'tabler:phone', valueClass: 'font-mono' },
+    { key: 'country', label: t('detail.fields.country'), ...show('country', card ? countryName(card) || '-' : '-'), icon: 'tabler:world' },
+    // 卡片类型文案与后台同源，不再截掉 eSIM 前缀。
+    { key: 'type', label: t('detail.fields.type'), ...show('type', card ? card.type || getKindName(card.typeKind) : '-'), icon: 'tabler:device-sim' },
+    { key: 'device', label: t('detail.fields.device'), ...show('device', card?.device || '-'), icon: 'tabler:device-mobile' },
   ]
 })
 
 const keepAliveInfo = computed<InfoItem[]>(() => {
   const card = data.value
+  const lockedValue = lockedHint.value
+  const show = (field: PublicField, value: string | undefined): Pick<InfoItem, 'value' | 'locked'> =>
+    isLocked(card, field) ? { value: lockedValue, locked: true } : { value, locked: false }
   return [
-    { key: 'keepAlive', label: t('detail.fields.keepAlive'), value: card ? joinList(keepAliveLabels(card)) || '-' : '-', icon: 'tabler:shield-check' },
-    { key: 'cycle', label: t('detail.fields.cycle'), value: card ? cycleText(card) : '-', icon: 'tabler:repeat' },
-    { key: 'nextRenewal', label: t('detail.fields.nextRenewal'), value: card?.nextRenewalEnd ? `${card.nextRenewalAt} ~ ${card.nextRenewalEnd}` : card?.nextRenewalAt ?? '-', icon: 'tabler:calendar-event' },
-    { key: 'expiresAt', label: t('detail.fields.expiresAt'), value: card?.expiresAt ?? '-', icon: 'tabler:calendar-check' },
+    { key: 'keepAlive', label: t('detail.fields.keepAlive'), ...show('keepAlive', card ? joinList(keepAliveLabels(card)) || '-' : '-'), icon: 'tabler:shield-check' },
+    { key: 'cycle', label: t('detail.fields.cycle'), ...show('cycle', card ? cycleText(card) : '-'), icon: 'tabler:repeat' },
+    { key: 'nextRenewal', label: t('detail.fields.nextRenewal'), ...show('dates', card?.nextRenewalEnd ? `${card.nextRenewalAt} ~ ${card.nextRenewalEnd}` : card?.nextRenewalAt ?? '-'), icon: 'tabler:calendar-event' },
+    { key: 'expiresAt', label: t('detail.fields.expiresAt'), ...show('dates', card?.expiresAt ?? '-'), icon: 'tabler:calendar-check' },
   ]
 })
 

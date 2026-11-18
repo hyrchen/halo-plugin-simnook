@@ -27,7 +27,6 @@ import reactor.core.publisher.Mono;
 import run.halo.app.core.extension.endpoint.CustomEndpoint;
 import run.halo.app.extension.GroupVersion;
 import run.halo.app.extension.ReactiveExtensionClient;
-import run.halo.app.plugin.ReactiveSettingFetcher;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
 
@@ -36,11 +35,9 @@ import tools.jackson.databind.node.ObjectNode;
 public class ManagementEndpoint implements CustomEndpoint {
     private static final JsonMapper JSON = JsonMapper.builder().build();
     private final ReactiveExtensionClient client;
-    private final ReactiveSettingFetcher settings;
 
-    public ManagementEndpoint(ReactiveExtensionClient client, ReactiveSettingFetcher settings) {
+    public ManagementEndpoint(ReactiveExtensionClient client) {
         this.client = client;
-        this.settings = settings;
     }
 
     @Override
@@ -55,21 +52,17 @@ public class ManagementEndpoint implements CustomEndpoint {
                         "cardviews",
                         request -> {
                             var locale = Messages.locale(request.headers().firstHeader(HttpHeaders.ACCEPT_LANGUAGE));
-                            return settings.getSettingValues()
-                                    .map(RenewalSettings::from)
-                                    .flatMap(schedule -> client.list(
-                                                    SimCard.class,
-                                                    card -> card.getMetadata().getDeletionTimestamp() == null,
-                                                    PublicCard.SOURCE_ORDER)
-                                            .index()
-                                            .map(item -> managedCard(
-                                                    item.getT2(),
-                                                    schedule.today(),
-                                                    item.getT1().intValue(),
-                                                    locale))
-                                            .collectList()
-                                            .flatMap(cards -> privateResponse()
-                                                    .bodyValue(Map.of("cards", cards, "demo", false, "full", true))));
+                            var today = RenewalSettings.today();
+                            return client.list(
+                                            SimCard.class,
+                                            card -> card.getMetadata().getDeletionTimestamp() == null,
+                                            PublicCard.SOURCE_ORDER)
+                                    .index()
+                                    .map(item -> managedCard(
+                                            item.getT2(), today, item.getT1().intValue(), locale))
+                                    .collectList()
+                                    .flatMap(cards -> privateResponse()
+                                            .bodyValue(Map.of("cards", cards, "demo", false, "full", true)));
                         },
                         builder -> builder.operationId("listCardViews")
                                 .tag("SimnookManagementV1alpha1")
@@ -78,11 +71,10 @@ public class ManagementEndpoint implements CustomEndpoint {
                         "cardviews/{name}",
                         request -> client.fetch(SimCard.class, request.pathVariable("name"))
                                 .filter(card -> card.getMetadata().getDeletionTimestamp() == null)
-                                .zipWith(settings.getSettingValues().map(RenewalSettings::from))
-                                .flatMap(result -> privateResponse()
+                                .flatMap(card -> privateResponse()
                                         .bodyValue(managedCard(
-                                                result.getT1(),
-                                                result.getT2().today(),
+                                                card,
+                                                RenewalSettings.today(),
                                                 0,
                                                 Messages.locale(
                                                         request.headers().firstHeader(HttpHeaders.ACCEPT_LANGUAGE)))))

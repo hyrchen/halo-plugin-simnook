@@ -16,6 +16,7 @@ const { t, locale, label, recordTypeLabel } = useSimnookI18n()
 const api = new SimCardV1alpha1Api(undefined, '', axiosInstance)
 const managementApi = new SimnookManagementV1alpha1Api(undefined, '', axiosInstance)
 const tab = ref('cards')
+const reminderPanel = ref<InstanceType<typeof ReminderPanel>>()
 const tabs = computed(() => [{ id: 'cards', label: t('号卡') }, { id: 'todo', label: t('续费提醒') }])
 const cards = ref<ManagedCardView[]>([])
 const page = ref(1), size = ref(10)
@@ -39,14 +40,16 @@ const deleting = ref('')
 const editing = ref<SimCard>()
 const form = ref<CardSpec>({ name: '', records: [] })
 const formTab = ref('basic')
-const formTabs = computed(() => [{ id: 'basic', label: t('基本信息') }, { id: 'renewal', label: t('续费与消费') }, { id: 'more', label: t('更多设置') }, { id: 'visibility', label: t('公开设置') }])
-// 与后端 PublicCard.OPTIONAL_PUBLIC_FIELDS 保持一致；未勾选时访客接口不会返回这些字段。
-const publicFieldOptions = computed(() => [
- { value: 'number', label: t('完整号码') }, { value: 'type', label: t('卡片类型') }, { value: 'device', label: t('主要使用设备') },
- { value: 'balance', label: t('余额与更新日期') }, { value: 'account', label: t('账户名称') }, { value: 'services', label: t('绑定的服务') },
-])
-const alwaysPublic = computed(() => [t('展示名称'), t('运营商'), t('号码末四位'), t('号码国家'), t('续费周期与价格'), t('有效期与续费日期'), t('消费金额与日期')])
-const alwaysPrivate = computed(() => [t('消费记录标题'), t('数据检查备注')])
+const formTabs = computed(() => [{ id: 'basic', label: t('基本信息') }, { id: 'renewal', label: t('续费与消费') }, { id: 'personal', label: t('个人信息') }, { id: 'appearance', label: t('外观与排序') }, { id: 'visibility', label: t('公开设置') }])
+// 与后端 PublicCard.PUBLIC_FIELDS 顺序一致；勾选的字段对访客公开，未勾选的只有管理员可见。
+const PUBLIC_FIELDS = ['name', 'carrier', 'last4', 'number', 'country', 'type', 'keepAlive', 'cycle', 'price', 'dates', 'firstPurchase', 'history', 'device', 'balance', 'account', 'services']
+// 未设置过公开列表的号卡，沿用早期版本访客可见的字段。
+const DEFAULT_PUBLIC_FIELDS = ['name', 'carrier', 'last4', 'country', 'type', 'keepAlive', 'cycle', 'price', 'dates', 'firstPurchase', 'history']
+const publicFieldOptions = computed(() => PUBLIC_FIELDS.map(value => ({ value, label: t(({
+ name: '展示名称', carrier: '运营商与图标', last4: '号码末四位', number: '完整号码', country: '号码国家', type: '卡片类型', keepAlive: '保号动作',
+ cycle: '续费周期', price: '续费价格', dates: '有效期与续费日期', firstPurchase: '首次购买日期', history: '消费记录', device: '主要使用设备',
+ balance: '余额与更新日期', account: '账户名称', services: '绑定的服务',
+} as Record<string, string>)[value]!) })))
 // FormKit 文本输入默认有约 20ms 防抖，失焦时等它把最后的输入写回模型后再整理，否则会被原值覆盖。
 function tidyNumber() { setTimeout(() => { form.value.number = tidyPhoneNumber(form.value.number) }, 50) }
 const cycle = ref('')
@@ -147,6 +150,8 @@ async function edit(card?: SimCard, template?: CardSpec) {
  if (form.value.region) form.value.countryName = [form.value.region, form.value.countryName].filter(Boolean).join(' ')
  if (!card) form.value.name = cardName(form.value.carrier, form.value.number)
  cycle.value = cycleChoice(form.value)
+ // 公开列表在表单里始终是完整清单；未设置过的号卡显示默认公开字段。
+ form.value.publicFields = [...(form.value.publicFields ?? DEFAULT_PUBLIC_FIELDS)]
  formTab.value = 'basic'
  conflict.value = false; visible.value = true
  await nextTick()
@@ -168,7 +173,7 @@ function normalize(spec: CardSpec): CardSpec {
  }
  const country = result.countryName?.trim() ?? ''
  result.number = tidyPhoneNumber(result.number)
- if (!result.publicFields?.length) delete result.publicFields
+ result.publicFields = PUBLIC_FIELDS.filter(field => result.publicFields?.includes(field))
  const flag = country.match(/^[\u{1F1E6}-\u{1F1FF}]{2}/u)?.[0] ?? ''
  result.region = flag || undefined
  result.countryName = country.slice(flag.length).trim() || undefined
@@ -189,7 +194,7 @@ function validRenewalWindow(spec: CardSpec): boolean {
  if (!spec.nextRenewalEnd || spec.cancelled || spec.cancelledAt) return true
  const start = spec.nextRenewalAt || entryExpiry(spec)
  if (start && spec.nextRenewalEnd >= start) return true
- formTab.value = 'more'
+ formTab.value = 'renewal'
  Toast.warning(t('请填写续费起始日，且截止日不能早于起始日'))
  return false
 }
@@ -245,12 +250,13 @@ function openFrontend() { window.open('/simnook/', '_blank', 'noopener,noreferre
   <template #actions>
    <VButton @click="openFrontend">{{ t('打开前台页面') }}</VButton>
    <VButton v-if="tab === 'cards'" type="secondary" @click="edit()">{{ t('新增号卡') }}</VButton>
+   <VButton v-else type="secondary" :disabled="!reminderPanel?.ready" @click="reminderPanel?.add()">{{ t('添加渠道') }}</VButton>
   </template>
  </VPageHeader>
  <div class="m-0 md:m-4">
  <VCard :body-class="['!p-0']">
   <template #header><VTabbar v-model:active-id="tab" :items="tabs" class="w-full" type="outline" /></template>
- <ReminderPanel v-if="tab === 'todo'" @saved="load" />
+ <ReminderPanel v-if="tab === 'todo'" ref="reminderPanel" />
   <template v-else>
   <!-- 沿用 Halo 列表页筛选栏的结构：灰底条，搜索在左，筛选靠右；筛选顺序与列表从左到右的展示顺序一致。 -->
   <div class="block w-full bg-gray-50 px-4 py-3">
@@ -302,7 +308,7 @@ function openFrontend() { window.open('/simnook/', '_blank', 'noopener,noreferre
    <div>
    <div v-show="formTab === 'basic'">
     <FormKit name="carrier" type="select" :label="t('运营商')" :placeholder="t('选择或输入运营商')" :options="withExisting(BUILTIN_CARRIERS.map(item => item.name), form.carrier)" searchable allow-create clearable />
-    <VSpace v-if="logoPreview" spacing="md" class="mb-4"><VAvatar :src="logoPreview" :alt="t('运营商图标预览')" size="md" /><span class="text-sm text-gray-500">{{ t('已匹配运营商图标，可在更多设置中更换。') }}</span></VSpace>
+    <VSpace v-if="logoPreview" spacing="md" class="mb-4"><VAvatar :src="logoPreview" :alt="t('运营商图标预览')" size="md" /><span class="text-sm text-gray-500">{{ t('已匹配运营商图标，可在外观与排序中更换。') }}</span></VSpace>
     <div class="simnook-form-grid grid grid-cols-1 gap-x-4 md:grid-cols-2">
      <!-- FormKit 由宿主提供，组件级 @blur 不可靠；在外层捕获原生 focusout，离开输入框时整理号码。 -->
      <div @focusout="tidyNumber"><FormKit name="number" type="text" :label="t('完整号码')" :help="t('号码整理说明')" /></div>
@@ -324,14 +330,6 @@ function openFrontend() { window.open('/simnook/', '_blank', 'noopener,noreferre
      <FormKit name="cycleDays" type="hidden" :value="form.cycleDays" preserve />
      <FormKit name="cycleLabel" type="hidden" :value="form.cycleLabel" preserve />
     </template>
-    <FormKit name="records" type="array" :label="t('消费记录')" :max="1000" :item-labels="recordLabels">
-     <template #default="{ value }">
-      <ExpenseFields :record="value ?? {}" :initialize="Boolean(value)" :card="form" :types="withExisting(recordTypes, ...(form.records ?? []).map(record => record.type)).map(option => ({ ...option, label: recordTypeLabel(option.value) }))" :currencies="withExisting(currencies, ...(form.records ?? []).map(record => record.currency))" />
-     </template>
-    </FormKit>
-   </div>
-   <div v-show="formTab === 'more'">
-    <!-- 按使用频率分组：续费日期最常改，外观最少改。 -->
     <h3 class="mb-2 text-sm font-semibold">{{ t('续费与停用') }}</h3>
     <div class="simnook-form-grid grid grid-cols-1 gap-x-4 md:grid-cols-2">
      <FormKit name="nextRenewalAt" type="date" :label="t('下次续费起始日')" :help="t('留空时跟随有效期。')" />
@@ -341,7 +339,13 @@ function openFrontend() { window.open('/simnook/', '_blank', 'noopener,noreferre
      <FormKit name="cancelledAt" type="date" :label="t('停用日期')" :help="t('填写后自动标记为已注销。')" />
     </div>
     <FormKit v-if="editing?.spec.cancelled" name="cancelled" type="checkbox" :label="t('已注销（旧版标记）')" />
-    <h3 class="mb-2 mt-2 border-t pt-4 text-sm font-semibold">{{ t('个人信息') }}</h3>
+    <FormKit name="records" type="array" :label="t('消费记录')" :max="1000" :item-labels="recordLabels">
+     <template #default="{ value }">
+      <ExpenseFields :record="value ?? {}" :initialize="Boolean(value)" :card="form" :types="withExisting(recordTypes, ...(form.records ?? []).map(record => record.type)).map(option => ({ ...option, label: recordTypeLabel(option.value) }))" :currencies="withExisting(currencies, ...(form.records ?? []).map(record => record.currency))" />
+     </template>
+    </FormKit>
+   </div>
+   <div v-show="formTab === 'personal'">
     <div class="simnook-form-grid grid grid-cols-1 gap-x-4 md:grid-cols-2">
      <FormKit name="balance" type="number" :label="t('余额')" step="0.01" />
      <FormKit name="balanceUpdatedAt" type="date" :label="t('余额更新日期')" />
@@ -351,7 +355,8 @@ function openFrontend() { window.open('/simnook/', '_blank', 'noopener,noreferre
     <FormKit name="services" type="select" :label="t('绑定的服务')" :options="withExisting(services, ...(form.services ?? []))" multiple searchable allow-create />
     <FormKit v-if="editing?.spec.typeLabel" name="typeLabel" type="text" :label="t('具体卡片类型')" />
     <FormKit v-if="editing?.spec.dataCheck" name="dataCheck" type="textarea" :label="t('旧版数据检查备注')" />
-    <h3 class="mb-2 mt-2 border-t pt-4 text-sm font-semibold">{{ t('外观与排序') }}</h3>
+   </div>
+   <div v-show="formTab === 'appearance'">
     <div class="simnook-form-grid grid grid-cols-1 gap-x-4 md:grid-cols-2">
      <FormKit name="typeColor" type="select" :label="t('类型图标颜色')" :placeholder="t('随卡片类型')" :options="typeColors" clearable />
      <FormKit v-model="builtinLogo" type="select" :label="t('内置运营商图标')" :placeholder="t('按运营商自动匹配')" :options="builtinLogoOptions" :ignore="true" clearable />
@@ -360,12 +365,7 @@ function openFrontend() { window.open('/simnook/', '_blank', 'noopener,noreferre
     <FormKit name="logo" type="attachment" :label="t('自定义运营商图标')" :help="t('选择或上传后优先使用此图标。')" />
    </div>
    <div v-show="formTab === 'visibility'">
-    <VAlert type="info" class="mb-4" :description="t('公开设置说明')" />
-    <p class="mb-2 text-sm font-semibold">{{ t('始终公开') }}</p>
-    <p class="mb-4 text-sm text-gray-500">{{ alwaysPublic.join('、') }}</p>
-    <FormKit name="publicFields" type="checkbox" :label="t('选择公开字段')" :options="publicFieldOptions" :help="t('未勾选的字段只有登录的管理员能看到。')" />
-    <p class="mb-2 mt-4 text-sm font-semibold">{{ t('始终私有') }}</p>
-    <p class="text-sm text-gray-500">{{ alwaysPrivate.join('、') }}</p>
+    <FormKit name="publicFields" type="checkbox" :label="t('公开字段')" :options="publicFieldOptions" />
    </div>
    </div>
   </FormKit>

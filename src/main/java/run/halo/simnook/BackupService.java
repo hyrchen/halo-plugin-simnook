@@ -28,7 +28,6 @@ import run.halo.app.extension.AbstractExtension;
 import run.halo.app.extension.Metadata;
 import run.halo.app.extension.ReactiveExtensionClient;
 import run.halo.app.plugin.PluginContext;
-import run.halo.app.plugin.ReactiveSettingFetcher;
 import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
@@ -43,12 +42,10 @@ public class BackupService {
             .build();
     private final ReactiveExtensionClient client;
     private final PluginContext context;
-    private final ReactiveSettingFetcher settings;
 
-    public BackupService(ReactiveExtensionClient client, PluginContext context, ReactiveSettingFetcher settings) {
+    public BackupService(ReactiveExtensionClient client, PluginContext context) {
         this.client = client;
         this.context = context;
-        this.settings = settings;
     }
 
     record Snapshot(Map<String, SimCard> cards) {}
@@ -290,51 +287,47 @@ public class BackupService {
 
     Mono<String> csv(String kind) {
         if (!List.of("cards", "records").contains(kind)) throw bad("不支持的 CSV 类型");
-        return export().zipWith(settings.getSettingValues().map(RenewalSettings::from))
-                .publishOn(Schedulers.boundedElastic())
-                .map(pair -> {
-                    var document = pair.getT1();
-                    var today = pair.getT2().today();
-                    var rows = new StringBuilder();
-                    if ("cards".equals(kind)) {
-                        rows.append(
-                                "id,name,carrier,number,country,currency,price,expiresAt,nextRenewalAt,nextRenewalEnd\n");
-                        for (var card : document.cards()) {
-                            var spec = card.spec();
-                            var facts = CardFacts.from(spec, today);
-                            csvRow(
-                                    rows,
-                                    card.name(),
-                                    spec.getName(),
-                                    spec.getCarrier(),
-                                    spec.getNumber(),
-                                    spec.getCountryName(),
-                                    spec.getCurrency(),
-                                    spec.getPrice(),
-                                    facts.expiry(),
-                                    facts.renewal(),
-                                    facts.renewalEnd());
-                        }
-                    } else {
-                        rows.append("cardId,cardName,recordId,type,date,amount,currency,rate,extendsTo,title\n");
-                        for (var card : document.cards())
-                            for (var row : CardFacts.records(card.spec())) {
-                                csvRow(
-                                        rows,
-                                        card.name(),
-                                        card.spec().getName(),
-                                        row.getId(),
-                                        row.getType(),
-                                        row.getDate(),
-                                        row.getAmount(),
-                                        row.getCurrency(),
-                                        row.getRate(),
-                                        row.getExtendsTo(),
-                                        row.getTitle());
-                            }
+        return export().publishOn(Schedulers.boundedElastic()).map(document -> {
+            var today = RenewalSettings.today();
+            var rows = new StringBuilder();
+            if ("cards".equals(kind)) {
+                rows.append("id,name,carrier,number,country,currency,price,expiresAt,nextRenewalAt,nextRenewalEnd\n");
+                for (var card : document.cards()) {
+                    var spec = card.spec();
+                    var facts = CardFacts.from(spec, today);
+                    csvRow(
+                            rows,
+                            card.name(),
+                            spec.getName(),
+                            spec.getCarrier(),
+                            spec.getNumber(),
+                            spec.getCountryName(),
+                            spec.getCurrency(),
+                            spec.getPrice(),
+                            facts.expiry(),
+                            facts.renewal(),
+                            facts.renewalEnd());
+                }
+            } else {
+                rows.append("cardId,cardName,recordId,type,date,amount,currency,rate,extendsTo,title\n");
+                for (var card : document.cards())
+                    for (var row : CardFacts.records(card.spec())) {
+                        csvRow(
+                                rows,
+                                card.name(),
+                                card.spec().getName(),
+                                row.getId(),
+                                row.getType(),
+                                row.getDate(),
+                                row.getAmount(),
+                                row.getCurrency(),
+                                row.getRate(),
+                                row.getExtendsTo(),
+                                row.getTitle());
                     }
-                    return rows.toString();
-                });
+            }
+            return rows.toString();
+        });
     }
 
     static void csvRow(StringBuilder out, Object... values) {

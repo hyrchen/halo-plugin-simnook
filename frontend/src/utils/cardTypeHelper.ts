@@ -22,12 +22,13 @@ const COLOR_CLASSES: Record<NotionColor, string> = {
   red: 'text-rose-500',
 }
 
-export function getKindIcon(kind: CardKind): string {
-  return KIND_ICONS[kind] ?? KIND_ICONS.physical
+/** 访客视图中卡片类型未公开时为 null：显示通用图标、不显示类型名，避免误显示为实体 SIM。 */
+export function getKindIcon(kind: CardKind | null): string {
+  return kind ? KIND_ICONS[kind] ?? KIND_ICONS.physical : 'tabler:lock'
 }
 
-export function getKindName(kind: CardKind): string {
-  return i18n.global.t(`cardKinds.${kind in KIND_ICONS ? kind : 'physical'}`)
+export function getKindName(kind: CardKind | null): string {
+  return kind ? i18n.global.t(`cardKinds.${kind in KIND_ICONS ? kind : 'physical'}`) : ''
 }
 
 export function getTypeColorClass(color: NotionColor): string {

@@ -15,6 +15,9 @@
 
 // May contain unused imports in some cases
 // @ts-ignore
+import type { ReminderCardOption } from './reminder-card-option';
+// May contain unused imports in some cases
+// @ts-ignore
 import type { ReminderChannelView } from './reminder-channel-view';
 // May contain unused imports in some cases
 // @ts-ignore
@@ -40,27 +43,9 @@ export interface ReminderChannelsView {
     'recipients'?: Array<ReminderRecipient>;
     /**
      * 
-     * @type {string}
+     * @type {Array<ReminderCardOption>}
      * @memberof ReminderChannelsView
      */
-    'sendTime'?: string;
-    /**
-     * 
-     * @type {string}
-     * @memberof ReminderChannelsView
-     */
-    'timezone'?: string;
-    /**
-     * 
-     * @type {number}
-     * @memberof ReminderChannelsView
-     */
-    'daysAhead'?: number;
-    /**
-     * 
-     * @type {string}
-     * @memberof ReminderChannelsView
-     */
-    'nextRunAt'?: string;
+    'cards'?: Array<ReminderCardOption>;
 }
 
