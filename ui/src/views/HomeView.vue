@@ -273,7 +273,7 @@ function openFrontend() { window.open('/simnook/', '_blank', 'noopener,noreferre
     </VEntityField>
    </template>
    <template #end>
-    <VEntityField v-if="renewalDate(card)" :description="renewalDate(card)" />
+    <VEntityField v-if="renewalDate(card)" :description="`${t('下次续费')}：${renewalDate(card)}`" />
     <VEntityField :description="t('消费记录数量', card.history?.length || 0)" />
     <VEntityField v-if="card.status !== 'cancelled'"><template #description><VStatusDot :state="urgencyState(card.urgencyCode)" :animate="card.urgencyCode === 'overdue'" :text="card.urgency" /></template></VEntityField>
     <VEntityField><template #description><VTag :theme="card.status === 'active' ? 'default' : 'danger'">{{ card.statusLabel }}</VTag></template></VEntityField>
