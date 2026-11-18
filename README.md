@@ -1,4 +1,5 @@
 <div align="center">
+  <img src="https://raw.githubusercontent.com/sunnyhmz7010/halo-plugin-simnook/main/src/main/resources/logo.svg" alt="SIMnook Logo" width="96" />
   <h1>SIMnook</h1>
   <p>在 Halo 里管理号卡与消费记录，并生成一个号码脱敏的公开号卡墙</p>
 </div>
