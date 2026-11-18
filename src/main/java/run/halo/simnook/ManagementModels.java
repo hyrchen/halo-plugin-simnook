@@ -51,8 +51,6 @@ public final class ManagementModels {
         private String account;
         private String type;
         private List<String> services;
-        private List<String> checks;
-        private String dataCheck;
 
         @Schema(
                 allowableValues = {
@@ -85,6 +83,5 @@ public final class ManagementModels {
         private BigDecimal amountCNY;
         private String extendsTo;
         private String title;
-        private List<String> checks;
     }
 }

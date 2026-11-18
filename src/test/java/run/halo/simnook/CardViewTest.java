@@ -92,22 +92,18 @@ class CardViewTest {
     }
 
     @Test
-    void managedViewAddsPrivateFieldsAndLocalizedChecks() {
+    void managedViewAddsPrivateFieldsAndTreatsInvalidDatesAsEmpty() {
         var c = card("a");
-        c.getSpec().setNumber("");
-        c.getSpec().setCountryName("美国");
         c.getSpec().setCancelledAt("not-a-date");
-        var foreign = renewal("2026-10-01", "2026-13-01", "10", "JPY", null);
-        c.getSpec().setRecords(List.of(foreign));
+        c.getSpec().setRecords(List.of(renewal("2026-10-01", "2026-13-01", "10", "JPY", null)));
 
         var en = ManagementEndpoint.managedCard(c, TODAY, 0, Locale.ENGLISH);
-        var zh = ManagementEndpoint.managedCard(c, TODAY, 0, Locale.SIMPLIFIED_CHINESE);
         assertThat(en.path("statusLabel").asString()).isEqualTo("Active");
         assertThat(en.path("type").asString()).isEqualTo("Physical SIM");
         assertThat(en.path("account").asString()).isEqualTo("private-account");
-        assertThat(en.path("dataCheck").asString()).contains("Phone number is missing");
-        assertThat(zh.path("dataCheck").asString()).contains("缺号码", "停用日期不是有效日期");
-        assertThat(zh.path("history").get(0).path("title").asString()).isEqualTo("private-title");
-        assertThat(zh.path("history").get(0).path("checks").toString()).contains("外币缺汇率", "本次有效期延至不是有效日期");
+        assertThat(en.path("number").asString()).isEqualTo("+86 13800123456");
+        assertThat(en.path("history").get(0).path("title").asString()).isEqualTo("private-title");
+        assertThat(en.path("history").get(0).path("extendsTo").isNull()).isTrue();
+        assertThat(en.has("dataCheck")).isFalse();
     }
 }

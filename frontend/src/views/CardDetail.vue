@@ -171,12 +171,9 @@ const accountInfo = computed<InfoItem[]>(() => {
   const lockedValue = lockedHint.value
   const accountLocked = isLocked(card, 'account')
   const servicesLocked = isLocked(card, 'services')
-  // 数据检查备注不在可公开字段内，仅管理员可见。
-  const checkLocked = !cardsStore.full
   return [
     { key: 'account', label: t('detail.fields.account'), value: accountLocked ? lockedValue : card?.account || '-', icon: 'tabler:user', locked: accountLocked },
     { key: 'services', label: t('detail.fields.services'), value: servicesLocked ? lockedValue : joinList(card?.services ?? []) || '-', icon: 'tabler:link', locked: servicesLocked },
-    { key: 'dataCheck', label: t('detail.fields.dataCheck'), value: checkLocked ? lockedValue : card?.dataCheck || t('detail.noIssues'), icon: 'tabler:alert-triangle', locked: checkLocked, valueClass: !checkLocked && card?.dataCheck ? 'text-yellow-600 dark:text-yellow-400' : '' },
   ]
 })
 

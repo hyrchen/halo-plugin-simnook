@@ -61,12 +61,6 @@ export interface ManagedCardView {
     'carrier'?: string;
     /**
      * 
-     * @type {Array<string>}
-     * @memberof ManagedCardView
-     */
-    'checks'?: Array<string>;
-    /**
-     * 
      * @type {string}
      * @memberof ManagedCardView
      */
@@ -89,12 +83,6 @@ export interface ManagedCardView {
      * @memberof ManagedCardView
      */
     'cycleLabel'?: string;
-    /**
-     * 
-     * @type {string}
-     * @memberof ManagedCardView
-     */
-    'dataCheck'?: string;
     /**
      * 
      * @type {string}

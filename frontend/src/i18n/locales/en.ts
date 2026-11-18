@@ -191,7 +191,6 @@ const en: MessageSchema = {
     notApplicable: 'N/A',
     perMonth: '{currency} / mo',
     locked: 'Sign in to view',
-    noIssues: 'No issues',
     metrics: {
       price: 'Renewal price',
       monthly: 'Monthly cost',
@@ -218,7 +217,6 @@ const en: MessageSchema = {
       held: 'Held for',
       account: 'Account login',
       services: 'Linked services',
-      dataCheck: 'Data check',
     },
   },
 

@@ -67,26 +67,6 @@ public class ManagementEndpoint implements CustomEndpoint {
                         builder -> builder.operationId("listCardViews")
                                 .tag("SimnookManagementV1alpha1")
                                 .response(responseBuilder().implementation(ManagementModels.CardViews.class)))
-                .GET(
-                        "cardviews/{name}",
-                        request -> client.fetch(SimCard.class, request.pathVariable("name"))
-                                .filter(card -> card.getMetadata().getDeletionTimestamp() == null)
-                                .flatMap(card -> privateResponse()
-                                        .bodyValue(managedCard(
-                                                card,
-                                                RenewalSettings.today(),
-                                                0,
-                                                Messages.locale(
-                                                        request.headers().firstHeader(HttpHeaders.ACCEPT_LANGUAGE)))))
-                                .switchIfEmpty(ServerResponse.notFound().build()),
-                        builder -> builder.operationId("getCardView")
-                                .tag("SimnookManagementV1alpha1")
-                                .parameter(parameterBuilder()
-                                        .name("name")
-                                        .in(ParameterIn.PATH)
-                                        .required(true)
-                                        .implementation(String.class))
-                                .response(responseBuilder().implementation(ManagementModels.ManagedCardView.class)))
                 .POST(
                         "cardviews/{name}/renewal",
                         request -> request.bodyToMono(ManagementModels.QuickRenewalRequest.class)
@@ -169,7 +149,6 @@ public class ManagementEndpoint implements CustomEndpoint {
                         i -> PublicCard.recordId(publicCard.id(), records.get(i), i),
                         records::get,
                         (first, ignored) -> first));
-        var checks = DataChecks.card(spec, publicCard, today, locale);
 
         ObjectNode result = JSON.valueToTree(publicCard);
         result.put("statusLabel", Messages.text(locale, "status." + publicCard.status()));
@@ -189,15 +168,12 @@ public class ManagementEndpoint implements CustomEndpoint {
         result.put("device", spec.getDevice());
         result.put("account", spec.getAccount());
         result.set("services", JSON.valueToTree(spec.getServices() == null ? List.of() : spec.getServices()));
-        result.set("checks", JSON.valueToTree(checks));
-        result.put("dataCheck", String.join(Messages.text(locale, "checkSeparator"), checks));
 
         var history = result.putArray("history");
         for (var item : publicCard.history()) {
             var source = sourceById.get(item.id());
             ObjectNode row = JSON.valueToTree(item);
             row.put("title", text(source.getTitle()));
-            row.set("checks", JSON.valueToTree(DataChecks.record(source, spec, today, locale)));
             history.add(row);
         }
         return result;

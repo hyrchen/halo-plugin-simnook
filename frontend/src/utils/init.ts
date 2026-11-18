@@ -51,7 +51,7 @@ export async function initApp(): Promise<void> {
     document.title = name
   }, { immediate: true })
 
-  // 直接传入本次选择，避免先于 i18n 同步时仍用上一次语言请求检查提示。
+  // 直接传入本次选择，避免先于 i18n 同步时仍用上一次语言请求本地化文案。
   stopLocaleWatch = watch(() => appStore.locale, async (locale, _previous, onCleanup) => {
     const cardsStore = useCardsStore()
     let active = true

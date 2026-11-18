@@ -103,7 +103,6 @@ export interface SimCard {
   number?: string | null
   services?: string[]
   account?: string | null
-  dataCheck?: string | null
 }
 
 export type ThemeSettings = Record<string, string | number | boolean>

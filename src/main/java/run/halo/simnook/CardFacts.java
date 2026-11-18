@@ -169,7 +169,7 @@ record CardFacts(
         try {
             return LocalDate.parse(value).toString();
         } catch (DateTimeParseException invalidDate) {
-            // Halo 的通用 CRUD 可以保存无效日期，公开视图按缺省处理，管理视图给出检查提示。
+            // Halo 的通用 CRUD 可以保存无效日期，统一按未填写处理。
             return null;
         }
     }

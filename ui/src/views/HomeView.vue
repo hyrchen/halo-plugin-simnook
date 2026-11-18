@@ -53,8 +53,6 @@ const publicFieldOptions = computed(() => PUBLIC_FIELDS.map(value => ({ value, l
 function tidyNumber() { setTimeout(() => { form.value.number = tidyPhoneNumber(form.value.number) }, 50) }
 const cycle = ref('')
 let initializing = false
-const checking = ref('')
-const check = ref<ManagedCardView>()
 const typeOptions = computed(() => [
  { label: t('实体 SIM'), value: 'physical' },
  { label: t('eSIM · 直写手机'), value: 'embedded' },
@@ -201,15 +199,6 @@ function validRenewalWindow(spec: CardSpec): boolean {
 function showInvalidTab() {
  formTab.value = !form.value.name?.trim() || form.value.name.length > 100 ? 'basic' : 'renewal'
 }
-async function inspect(card: ManagedCardView) {
- if (checking.value) return
- checking.value = card.id!
- try {
-  const { data } = await managementApi.getCardView({ name: card.id! }, { headers: { 'Accept-Language': locale.value } })
-  check.value = data
- } catch (error) { Toast.error(t('数据检查加载失败')); console.error(error) }
- finally { checking.value = '' }
-}
 async function save() {
  if (saving.value || conflict.value) return
  saving.value = true
@@ -290,7 +279,6 @@ function openFrontend() { window.open('/simnook/', '_blank', 'noopener,noreferre
    <template #dropdownItems>
     <VDropdownItem @click="openCard(card)">{{ t('编辑') }}</VDropdownItem>
     <VDropdownItem v-if="card.status !== 'cancelled'" @click="renewing = card">{{ t('快捷续费') }}</VDropdownItem>
-    <VDropdownItem :disabled="Boolean(checking)" @click="inspect(card)">{{ t('数据检查') }}</VDropdownItem>
     <VDropdownItem @click="openCard(card, true)">{{ t('再添同款') }}</VDropdownItem>
     <VDropdownDivider />
     <VDropdownItem type="danger" :disabled="deleting === card.id" @click="remove(card)">{{ t('删除') }}</VDropdownItem>
@@ -365,16 +353,6 @@ function openFrontend() { window.open('/simnook/', '_blank', 'noopener,noreferre
    </div>
   </FormKit>
   <template #footer><VButton type="secondary" :loading="saving" :disabled="conflict" @click="submit">{{ t('保存') }}</VButton></template>
- </VModal>
- <VModal v-if="check" :title="`${check.name} · ${t('数据检查')}`" :width="640" mount-to-body @close="check = undefined">
-  <VEntityContainer>
-   <VEntity>
-    <template #start><VEntityField :title="check.status === 'cancelled' ? check.statusLabel : `${check.statusLabel} · ${check.urgency}`" :description="check.dataCheck || t('号卡没有检查提示')" /></template>
-   </VEntity>
-   <VEntity v-for="record in check.history?.filter(item => item.checks?.length)" :key="record.id">
-    <template #start><VEntityField :title="record.title?.trim() || [record.date, recordTypeLabel(record.type)].map(value => value?.trim()).filter(Boolean).join(' · ') || t('未命名消费记录')" :description="record.checks?.join(locale.startsWith('zh') ? '；' : '; ')" /></template>
-   </VEntity>
-  </VEntityContainer>
  </VModal>
 </template>
 

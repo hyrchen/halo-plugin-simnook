@@ -195,7 +195,6 @@ export default {
     notApplicable: '不适用',
     perMonth: '{currency} / 月',
     locked: '登录后可见',
-    noIssues: '没有问题',
     metrics: {
       price: '续费价格',
       monthly: '月均支出',
@@ -222,7 +221,6 @@ export default {
       held: '已持有',
       account: '管理账号',
       services: '绑定的服务',
-      dataCheck: '数据检查',
     },
   },
 

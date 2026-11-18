@@ -34,12 +34,6 @@ export interface ManagedRecordView {
     'amountCNY'?: number;
     /**
      * 
-     * @type {Array<string>}
-     * @memberof ManagedRecordView
-     */
-    'checks'?: Array<string>;
-    /**
-     * 
      * @type {string}
      * @memberof ManagedRecordView
      */

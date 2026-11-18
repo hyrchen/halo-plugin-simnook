@@ -32,8 +32,6 @@ import type { BackupRestoreRequest } from '../models';
 // @ts-ignore
 import type { BackupRestoreResult } from '../models';
 // @ts-ignore
-import type { ManagedCardView } from '../models';
-// @ts-ignore
 import type { ManagedCardViews } from '../models';
 // @ts-ignore
 import type { QuickRenewalRequest } from '../models';
@@ -75,47 +73,6 @@ export const SimnookManagementV1alpha1ApiAxiosParamCreator = function (configura
             if (format !== undefined) {
                 localVarQueryParameter['format'] = format;
             }
-
-
-    
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-        /**
-         * 
-         * @param {string} name 
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        getCardView: async (name: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            // verify required parameter 'name' is not null or undefined
-            assertParamExists('getCardView', 'name', name)
-            const localVarPath = `/apis/console.api.simnook.halo.run/v1alpha1/cardviews/{name}`
-                .replace(`{${"name"}}`, encodeURIComponent(String(name)));
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
-
-            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
-
-            // authentication basicAuth required
-            // http basic authentication required
-            setBasicAuthToObject(localVarRequestOptions, configuration)
-
-            // authentication bearerAuth required
-            // http bearer authentication required
-            await setBearerAuthToObject(localVarHeaderParameter, configuration)
 
 
     
@@ -316,18 +273,6 @@ export const SimnookManagementV1alpha1ApiFp = function(configuration?: Configura
         },
         /**
          * 
-         * @param {string} name 
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async getCardView(name: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ManagedCardView>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.getCardView(name, options);
-            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
-            const localVarOperationServerBasePath = operationServerMap['SimnookManagementV1alpha1Api.getCardView']?.[localVarOperationServerIndex]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
-        },
-        /**
-         * 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
@@ -395,15 +340,6 @@ export const SimnookManagementV1alpha1ApiFactory = function (configuration?: Con
         },
         /**
          * 
-         * @param {SimnookManagementV1alpha1ApiGetCardViewRequest} requestParameters Request parameters.
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        getCardView(requestParameters: SimnookManagementV1alpha1ApiGetCardViewRequest, options?: RawAxiosRequestConfig): AxiosPromise<ManagedCardView> {
-            return localVarFp.getCardView(requestParameters.name, options).then((request) => request(axios, basePath));
-        },
-        /**
-         * 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
@@ -452,20 +388,6 @@ export interface SimnookManagementV1alpha1ApiExportBackupRequest {
      * @memberof SimnookManagementV1alpha1ApiExportBackup
      */
     readonly format?: string
-}
-
-/**
- * Request parameters for getCardView operation in SimnookManagementV1alpha1Api.
- * @export
- * @interface SimnookManagementV1alpha1ApiGetCardViewRequest
- */
-export interface SimnookManagementV1alpha1ApiGetCardViewRequest {
-    /**
-     * 
-     * @type {string}
-     * @memberof SimnookManagementV1alpha1ApiGetCardView
-     */
-    readonly name: string
 }
 
 /**
@@ -533,17 +455,6 @@ export class SimnookManagementV1alpha1Api extends BaseAPI {
      */
     public exportBackup(requestParameters: SimnookManagementV1alpha1ApiExportBackupRequest = {}, options?: RawAxiosRequestConfig) {
         return SimnookManagementV1alpha1ApiFp(this.configuration).exportBackup(requestParameters.format, options).then((request) => request(this.axios, this.basePath));
-    }
-
-    /**
-     * 
-     * @param {SimnookManagementV1alpha1ApiGetCardViewRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof SimnookManagementV1alpha1Api
-     */
-    public getCardView(requestParameters: SimnookManagementV1alpha1ApiGetCardViewRequest, options?: RawAxiosRequestConfig) {
-        return SimnookManagementV1alpha1ApiFp(this.configuration).getCardView(requestParameters.name, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
