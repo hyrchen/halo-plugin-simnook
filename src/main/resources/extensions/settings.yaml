@@ -5,10 +5,6 @@ metadata:
   name: simnook-settings
 spec:
   forms:
-    - group: backup
-      label: 备份恢复
-      formSchema:
-        - $cmp: simnook-backup
     - group: general
       label: 展示
       formSchema:
@@ -143,7 +139,7 @@ spec:
           name: cancelledLast
           value: true
           props:
-            inputType: checkbox
+            inputType: switch
             name: cancelledLast
             label: 将已注销号卡排在最后
             value: true
@@ -153,7 +149,7 @@ spec:
           name: disablePageAnimation
           value: false
           props:
-            inputType: checkbox
+            inputType: switch
             name: disablePageAnimation
             label: 减少页面过渡动画
             value: false
@@ -163,7 +159,7 @@ spec:
           name: hideAdminEntryWhenLoggedOut
           value: false
           props:
-            inputType: checkbox
+            inputType: switch
             name: hideAdminEntryWhenLoggedOut
             label: 对未登录访客隐藏后台入口
             value: false
@@ -173,7 +169,7 @@ spec:
           name: visitorInfoCardEnabled
           value: true
           props:
-            inputType: checkbox
+            inputType: switch
             name: visitorInfoCardEnabled
             label: 显示访客信息卡片
             value: true
@@ -188,7 +184,7 @@ spec:
           name: alertEnabled
           value: false
           props:
-            inputType: checkbox
+            inputType: switch
             name: alertEnabled
             label: 显示首页公告
             value: false
@@ -222,7 +218,7 @@ spec:
           name: backgroundEnabled
           value: false
           props:
-            inputType: checkbox
+            inputType: switch
             name: backgroundEnabled
             label: 启用自定义背景
             value: false

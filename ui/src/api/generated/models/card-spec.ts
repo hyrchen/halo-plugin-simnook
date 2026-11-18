@@ -43,12 +43,6 @@ export interface CardSpec {
     'balanceUpdatedAt'?: string;
     /**
      * 
-     * @type {boolean}
-     * @memberof CardSpec
-     */
-    'cancelled'?: boolean;
-    /**
-     * 
      * @type {string}
      * @memberof CardSpec
      */
@@ -88,25 +82,7 @@ export interface CardSpec {
      * @type {string}
      * @memberof CardSpec
      */
-    'dataCheck'?: string;
-    /**
-     * 
-     * @type {string}
-     * @memberof CardSpec
-     */
     'device'?: string;
-    /**
-     * 
-     * @type {string}
-     * @memberof CardSpec
-     */
-    'expiresAt'?: string;
-    /**
-     * 
-     * @type {string}
-     * @memberof CardSpec
-     */
-    'firstPurchaseAt'?: string;
     /**
      * 
      * @type {Array<string>}
@@ -191,12 +167,6 @@ export interface CardSpec {
      * @memberof CardSpec
      */
     'typeKind'?: CardSpecTypeKindEnum;
-    /**
-     * 
-     * @type {string}
-     * @memberof CardSpec
-     */
-    'typeLabel'?: string;
 }
 
 export const CardSpecTypeColorEnum = {

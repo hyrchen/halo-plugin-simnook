@@ -34,12 +34,6 @@ export interface ManagedCardViews {
      * @type {boolean}
      * @memberof ManagedCardViews
      */
-    'demo'?: boolean;
-    /**
-     * 
-     * @type {boolean}
-     * @memberof ManagedCardViews
-     */
     'full'?: boolean;
 }
 

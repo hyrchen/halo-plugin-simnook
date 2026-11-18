@@ -3,7 +3,7 @@ import type { ManagedCardView } from '../api/generated'
 export const URGENCY_CODES = ['window', 'overdue', 'days3', 'days7', 'days15', 'days30', 'days60', 'beyond', 'noDate', 'cancelled']
 
 /** 号码只保留开头的 + 和数字，去掉空格、全角空格、连字符、括号和点。 */
-export function compactNumber(value?: string): string | undefined {
+function compactNumber(value?: string): string | undefined {
  const trimmed = value?.trim()
  if (!trimmed) return undefined
  return trimmed.replace(/[\s\u3000\-–—().·]/g, '')
@@ -13,7 +13,7 @@ export function compactNumber(value?: string): string | undefined {
 const TWO_DIGIT_CODES = new Set('20 27 30 31 32 33 34 36 39 40 41 43 44 45 46 47 48 49 51 52 53 54 55 56 57 58 60 61 62 63 64 65 66 81 82 84 86 90 91 92 93 94 95 98'.split(' '))
 
 /** 国际区号长度；号码不以 + 开头或位数不足时返回 0。 */
-export function callingCodeLength(compact: string): number {
+function callingCodeLength(compact: string): number {
  const digits = /^\+(\d+)$/.exec(compact)?.[1] ?? ''
  const length = /^[17]/.test(digits) ? 1 : TWO_DIGIT_CODES.has(digits.slice(0, 2)) ? 2 : 3
  return digits.length > length ? length : 0

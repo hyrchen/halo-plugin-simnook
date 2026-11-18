@@ -166,7 +166,7 @@ export function joinList(items: string[]): string {
   return items.join(t('common.listSeparator'))
 }
 
-/** Keep-alive actions in the current language; labels that are not template options stay as written in Notion */
+/** Keep-alive actions in the current language; custom actions stay as entered */
 export function keepAliveLabels(card: SimCard): string[] {
   return card.keepAlive.map((label, index) => {
     const code = card.keepAliveCodes?.[index]
@@ -201,7 +201,7 @@ const REGION_NAME_OVERRIDES: Record<AppLocale, Record<string, string>> = {
 
 const regionNames = new Map<AppLocale, Intl.DisplayNames>()
 
-/** Country name in the current language from the flag emoji, falling back to the name written in Notion */
+/** Country name in the current language from the flag emoji, falling back to the entered name */
 export function countryName(card: SimCard): string {
   if (!card.region)
     return card.countryName

@@ -12,8 +12,6 @@ export interface CardGroup {
 const useCardsStore = defineStore('cards', () => {
   const cards = ref<SimCard[]>([])
   const full = ref(false)
-  const demo = ref(false)
-  const syncedAt = ref<string | null>(null)
 
   const totalCount = computed(() => cards.value.length)
   const activeCount = computed(() => cards.value.filter(c => c.status === 'active').length)
@@ -34,8 +32,6 @@ const useCardsStore = defineStore('cards', () => {
   function setCards(response: CardsResponse): void {
     cards.value = response.cards
     full.value = response.full
-    demo.value = response.demo
-    syncedAt.value = response.syncedAt
   }
 
   function clear(): void {
@@ -45,8 +41,6 @@ const useCardsStore = defineStore('cards', () => {
   return {
     cards,
     full,
-    demo,
-    syncedAt,
     totalCount,
     activeCount,
     groups,

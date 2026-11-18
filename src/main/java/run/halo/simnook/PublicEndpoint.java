@@ -51,7 +51,7 @@ public class PublicEndpoint implements CustomEndpoint {
                             .collectList()
                             .flatMap(cards -> ServerResponse.ok()
                                     .varyBy(HttpHeaders.ACCEPT_LANGUAGE)
-                                    .bodyValue(Map.of("cards", cards, "demo", false, "full", false)));
+                                    .bodyValue(Map.of("cards", cards, "full", false)));
                 })
                 .GET("site", this::site)
                 .build();
@@ -72,10 +72,7 @@ public class PublicEndpoint implements CustomEndpoint {
                         .bodyValue(Map.of(
                                 "sitename", result.getT1().title(),
                                 "version", pluginContext.getVersion(),
-                                "gitHash", "",
-                                "demo", false,
                                 "loggedIn", result.getT2(),
-                                "setupRequired", false,
                                 "theme_settings", result.getT1().theme())));
     }
 }

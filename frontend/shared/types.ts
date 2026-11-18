@@ -16,10 +16,9 @@ export type KeepAliveCode = 'topup' | 'addon' | 'use' | 'balanceChange' | 'autoC
 export type PublicField
   = | 'name' | 'carrier' | 'last4' | 'number' | 'country' | 'type' | 'keepAlive' | 'cycle' | 'price' | 'dates'
     | 'firstPurchase' | 'history' | 'device' | 'balance' | 'account' | 'services'
-export type ErrorParams = Record<string, string | number>
 
-/** Notion select option colors */
-export type NotionColor
+/** 卡片类型图标的颜色 */
+export type TypeColor
   = | 'default' | 'gray' | 'brown' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | 'pink' | 'red'
 
 export interface SimRecord {
@@ -60,7 +59,7 @@ export interface SimCard {
   /** Country or region name */
   countryName: string
   typeKind: CardKind | null
-  typeColor: NotionColor
+  typeColor: TypeColor
   /** Actions required to keep the number active */
   keepAlive: string[]
   keepAliveCodes: (KeepAliveCode | null)[]
@@ -105,7 +104,6 @@ export interface SimCard {
   services?: string[]
   account?: string | null
   dataCheck?: string | null
-  notionUrl?: string | null
 }
 
 export type ThemeSettings = Record<string, string | number | boolean>
@@ -113,50 +111,12 @@ export type ThemeSettings = Record<string, string | number | boolean>
 export interface SiteInfo {
   sitename: string
   version: string
-  gitHash: string
-  /** True when Notion is not configured and built-in demo data is served */
-  demo: boolean
-  syncedAt: string | null
   loggedIn: boolean
-  setupRequired: boolean
   theme_settings: ThemeSettings
 }
 
 export interface CardsResponse {
   cards: SimCard[]
-  syncedAt: string | null
-  demo: boolean
+  /** 管理员视图为 true，包含全部私有字段。 */
   full: boolean
-}
-
-export interface SyncStatus {
-  running: boolean
-  lastStartedAt: string | null
-  lastFinishedAt: string | null
-  lastSuccessAt: string | null
-  lastError: string | null
-  /** Warning when sync succeeded with some entries skipped */
-  lastWarning: string | null
-  lastReason: string | null
-  cardCount: number
-  recordCount: number
-  nextRunAt: string | null
-}
-
-export interface NotionSettingsView {
-  tokenConfigured: boolean
-  /** True when the token is set via environment variable and cannot be modified in the UI */
-  tokenFromEnv: boolean
-  cardsDb: string
-  recordsDb: string
-  mapping: string
-}
-
-export interface AdminStatus {
-  sync: SyncStatus
-  notion: NotionSettingsView
-  syncTime: string
-  timezone: string
-  recoveryCodesLeft: number
-  sessions: number
 }

@@ -18,11 +18,10 @@ export function recordKind(type: string | undefined): 'purchase' | 'renewal' | '
 }
 
 export function cycleChoice(card: CardSpec): string {
-  if (card.cycleDays == null && !card.cycleLabel) return ''
-  const days = card.cycleDays ?? Number(card.cycleLabel?.match(/[0-9]+/)?.[0] ?? 0)
-  const preset = CYCLE_OPTIONS.find(option => option.value === String(days))
+  if (card.cycleDays == null) return ''
+  const preset = CYCLE_OPTIONS.find(option => option.value === String(card.cycleDays))
   if (preset && (!card.cycleLabel || card.cycleLabel === preset.label)) return preset.value
-  return days === 0 && card.cycleLabel?.startsWith('不固定') ? 'varies' : 'custom'
+  return card.cycleDays === 0 && card.cycleLabel?.startsWith('不固定') ? 'varies' : 'custom'
 }
 
 export function cardName(carrier: string | undefined, number: string | undefined): string {
@@ -39,7 +38,6 @@ export function copyCardConfiguration(source: CardSpec): CardSpec {
     countryName: source.countryName,
     typeKind: source.typeKind,
     typeColor: source.typeColor,
-    typeLabel: source.typeLabel,
     logo: source.logo,
     keepAlive: source.keepAlive,
     cycleDays: source.cycleDays,
@@ -50,8 +48,9 @@ export function copyCardConfiguration(source: CardSpec): CardSpec {
   }))
 }
 
+/** 当前有效期：交易日期最新、且填写了延长日期的那条消费记录，与后端 CardFacts 一致。 */
 export function entryExpiry(card: CardSpec): string | undefined {
-  return card.expiresAt || card.records?.filter(record => record.date && record.extendsTo)
+  return card.records?.filter(record => record.date && record.extendsTo)
     .sort((a, b) => b.date!.localeCompare(a.date!) || b.extendsTo!.localeCompare(a.extendsTo!))[0]?.extendsTo
 }
 
@@ -71,7 +70,7 @@ export function newExpense(card: CardSpec, today = localDay()): ExpenseRecord {
 }
 
 export function suggestedExtension(card: CardSpec, date: string | undefined, type: string | undefined): string {
-  const days = card.cycleDays ?? Number(card.cycleLabel?.match(/[0-9]+/)?.[0] ?? 0)
+  const days = card.cycleDays ?? 0
   const kind = recordKind(type)
   if (!date || days <= 0 || !Number.isInteger(days) || !['purchase', 'renewal'].includes(kind)) return ''
   const expiry = kind === 'renewal' ? entryExpiry(card) : undefined

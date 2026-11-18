@@ -31,7 +31,7 @@ export async function refreshData(): Promise<void> {
   }
   catch (error) {
     if (cardsStore.full)
-      cardsStore.setCards({ cards: [], syncedAt: null, demo: false, full: false })
+      cardsStore.setCards({ cards: [], full: false })
     console.error('[init] Failed to fetch data:', error)
     appStore.connectionError = true
     throw error
@@ -54,8 +54,6 @@ export async function initApp(): Promise<void> {
   // 直接传入本次选择，避免先于 i18n 同步时仍用上一次语言请求检查提示。
   stopLocaleWatch = watch(() => appStore.locale, async (locale, _previous, onCleanup) => {
     const cardsStore = useCardsStore()
-    if (!cardsStore.full && !cardsStore.demo)
-      return
     let active = true
     onCleanup(() => { active = false })
     try {

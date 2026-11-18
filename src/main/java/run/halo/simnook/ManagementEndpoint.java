@@ -61,8 +61,8 @@ public class ManagementEndpoint implements CustomEndpoint {
                                     .map(item -> managedCard(
                                             item.getT2(), today, item.getT1().intValue(), locale))
                                     .collectList()
-                                    .flatMap(cards -> privateResponse()
-                                            .bodyValue(Map.of("cards", cards, "demo", false, "full", true)));
+                                    .flatMap(
+                                            cards -> privateResponse().bodyValue(Map.of("cards", cards, "full", true)));
                         },
                         builder -> builder.operationId("listCardViews")
                                 .tag("SimnookManagementV1alpha1")
@@ -147,22 +147,16 @@ public class ManagementEndpoint implements CustomEndpoint {
         if (!Objects.equals(Objects.toString(card.getMetadata().getVersion(), null), update.expectedVersion())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "号卡已变化，请重新加载并保留草稿");
         }
-        if (Boolean.TRUE.equals(card.getSpec().getCancelled())
-                || CardFacts.date(card.getSpec().getCancelledAt()) != null
+        if (CardFacts.date(card.getSpec().getCancelledAt()) != null
                 || CardFacts.records(card.getSpec()).size() >= 1000) throw BackupService.bad("已注销号卡或记录已满，不能追加续费");
         // 在服务端保留原有 BigDecimal，浏览器只提交本次记录，避免旧金额经过 JS Number 舍入。
         var result = JSON.convertValue(card, SimCard.class);
         var rows = new ArrayList<>(CardFacts.records(result.getSpec()));
         rows.add(record);
         result.getSpec().setRecords(rows);
-        if (present(result.getSpec().getExpiresAt())) result.getSpec().setExpiresAt(record.getExtendsTo());
         result.getSpec().setNextRenewalAt(next);
         result.getSpec().setNextRenewalEnd(end);
         return result;
-    }
-
-    static ObjectNode managedCard(SimCard card, LocalDate today, int order) {
-        return managedCard(card, today, order, Locale.SIMPLIFIED_CHINESE);
     }
 
     static ObjectNode managedCard(SimCard card, LocalDate today, int order, Locale locale) {
@@ -196,13 +190,7 @@ public class ManagementEndpoint implements CustomEndpoint {
         result.put("account", spec.getAccount());
         result.set("services", JSON.valueToTree(spec.getServices() == null ? List.of() : spec.getServices()));
         result.set("checks", JSON.valueToTree(checks));
-        var separator = Messages.text(locale, "checkSeparator");
-        var warning = String.join(separator, checks);
-        result.put(
-                "dataCheck",
-                present(spec.getDataCheck())
-                        ? (warning.isEmpty() ? spec.getDataCheck() : warning + separator + spec.getDataCheck())
-                        : warning);
+        result.put("dataCheck", String.join(Messages.text(locale, "checkSeparator"), checks));
 
         var history = result.putArray("history");
         for (var item : publicCard.history()) {

@@ -38,7 +38,6 @@ public class SimCard extends AbstractExtension {
                 defaultValue = "default")
         private String typeColor;
 
-        private String typeLabel;
         private String logo;
         private List<String> keepAlive;
         private Integer cycleDays;
@@ -51,12 +50,6 @@ public class SimCard extends AbstractExtension {
         private String currency;
 
         @Schema(format = "date")
-        private String expiresAt;
-
-        @Schema(format = "date")
-        private String firstPurchaseAt;
-
-        @Schema(format = "date")
         private String nextRenewalAt;
 
         @Schema(format = "date")
@@ -64,9 +57,6 @@ public class SimCard extends AbstractExtension {
 
         @Schema(format = "date")
         private String cancelledAt;
-
-        @Schema(defaultValue = "false")
-        private Boolean cancelled;
 
         private Integer order;
         private BigDecimal balance;
@@ -77,7 +67,6 @@ public class SimCard extends AbstractExtension {
         private String device;
         private String account;
         private List<String> services;
-        private String dataCheck;
 
         /** 访客可见的字段，取值见 {@link PublicCard#PUBLIC_FIELDS}。未设置时按 {@link PublicCard#DEFAULT_PUBLIC_FIELDS}， 空列表表示全部私有。 */
         @io.swagger.v3.oas.annotations.media.ArraySchema(

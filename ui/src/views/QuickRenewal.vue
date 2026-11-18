@@ -69,7 +69,7 @@ function submit() { (document.getElementById('simnook-quick-renewal') as HTMLFor
      <VDescriptionItem :label="t('新有效期')" :content="draft.extendsTo || '—'" />
      <VDescriptionItem :label="t('下次续费')" :content="[nextStart || draft.extendsTo || '—', nextEnd].filter(Boolean).join(' ~ ')" />
     </VDescription>
-    <VAlert v-if="card.spec.expiresAt || card.spec.nextRenewalAt || card.spec.nextRenewalEnd" type="info" class="mt-3" :description="t('续费日期更新提示')" />
+    <VAlert v-if="card.spec.nextRenewalAt || card.spec.nextRenewalEnd" type="info" class="mt-3" :description="t('续费日期更新提示')" />
    </FormKit>
   </template>
   <template #footer><VButton type="secondary" :loading="saving" :disabled="conflict || loading || failed" @click="submit">{{ t('保存续费') }}</VButton></template>

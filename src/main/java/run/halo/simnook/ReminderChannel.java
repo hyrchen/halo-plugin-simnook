@@ -29,13 +29,13 @@ public class ReminderChannel extends AbstractExtension {
         private boolean enabled;
         private List<String> recipients = new ArrayList<>();
         private List<String> events = new ArrayList<>();
-        /** 每日发送时间 HH:mm，按 Asia/Shanghai 计算；旧渠道缺省 09:00。 */
-        private String sendTime;
+        /** 每日发送时间 HH:mm，按 Asia/Shanghai 计算。 */
+        private String sendTime = "09:00";
         /** all：全部号卡（含以后新增）；selected：仅 {@link #cards} 中的号卡。 */
-        private String cardScope;
+        private String cardScope = "all";
 
         private List<String> cards = new ArrayList<>();
-        /** 只在续费起始日前这些天提醒，0 表示当天；旧渠道缺省为 7、3、1。 */
+        /** 只在续费起始日前这些天提醒即将到期，0 表示当天。 */
         private List<Integer> daysAhead = new ArrayList<>();
 
         private Map<String, String> submittedDates = new LinkedHashMap<>();

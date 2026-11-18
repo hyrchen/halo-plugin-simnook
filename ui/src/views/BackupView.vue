@@ -5,7 +5,6 @@ import { Dialog, Toast, VAlert, VButton, VDescription, VDescriptionItem, VEntity
 import { SimnookManagementV1alpha1Api, type BackupPreview, type BackupPreviewItem, type BackupRestoreDecision, type BackupRestoreResult } from '../api/generated'
 import { useSimnookI18n } from '../locales'
 
-const emit = defineEmits<{ restored: [] }>()
 const { t } = useSimnookI18n()
 const api = new SimnookManagementV1alpha1Api(undefined, '', axiosInstance)
 const content = ref('')
@@ -68,7 +67,6 @@ function restore() {
    try {
     const decisions: BackupRestoreDecision[] = (preview.value.items ?? []).map(item => ({ kind: item.kind, name: item.name, action: choices.value[key(item)], expectedVersion: item.expectedVersion }))
     result.value = (await api.restoreBackup({ backupRestoreRequest: { content: content.value, fileHash: preview.value.fileHash, decisions } })).data
-    emit('restored')
    } catch (cause) { error.value = message(cause) }
    finally { busy.value = false }
   },
@@ -77,7 +75,7 @@ function restore() {
 </script>
 
 <template>
- <VSpace direction="column" align="stretch" spacing="lg" class="w-full p-4">
+ <VSpace direction="column" align="stretch" spacing="lg" class="w-full">
   <h2 class="font-semibold">{{ t('导出备份') }}</h2>
   <VAlert type="info" :description="t('备份范围说明')" />
   <VSpace spacing="sm" class="flex-wrap">

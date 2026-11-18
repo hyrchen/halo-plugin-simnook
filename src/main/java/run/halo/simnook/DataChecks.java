@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-/** SIMerald v0.2.0 中文模板的检查规则。结果属于管理数据。 */
+/** 号卡与消费记录的数据检查规则，结果只出现在管理视图。 */
 final class DataChecks {
     private record Country(String flag, String zh, String en, String prefix) {}
 
@@ -64,10 +64,6 @@ final class DataChecks {
             entry("MXN", new Rate("Mex$", 0.28, 0.5)), entry("BRL", new Rate("R$", 0.9, 1.8)),
             entry("AUD", new Rate("A$", 3.6, 5.6)), entry("NZD", new Rate("NZ$", 3.3, 5.3)));
 
-    static List<String> card(SimCard.CardSpec spec, PublicCard view, LocalDate today) {
-        return card(spec, view, today, Locale.SIMPLIFIED_CHINESE);
-    }
-
     static List<String> card(SimCard.CardSpec spec, PublicCard view, LocalDate today, Locale locale) {
         var warnings = new ArrayList<String>();
         var number = text(spec.getNumber()).replace(" ", "");
@@ -94,13 +90,11 @@ final class DataChecks {
             var missing = new ArrayList<String>();
             if (!present(spec.getCountryName()) && !present(spec.getRegion()))
                 missing.add(Messages.text(locale, "field.country"));
-            if (!present(spec.getTypeLabel()) && !present(spec.getTypeKind()))
-                missing.add(Messages.text(locale, "field.type"));
+            if (!present(spec.getTypeKind())) missing.add(Messages.text(locale, "field.type"));
             if (!"virtual".equals(view.typeKind()) && !present(spec.getDevice()))
                 missing.add(Messages.text(locale, "field.device"));
             if (actions.isEmpty()) missing.add(Messages.text(locale, "field.keepAlive"));
-            if (!present(spec.getCycleLabel()) && spec.getCycleDays() == null)
-                missing.add(Messages.text(locale, "field.cycle"));
+            if (spec.getCycleDays() == null) missing.add(Messages.text(locale, "field.cycle"));
             if (!missing.isEmpty())
                 warnings.add(Messages.text(
                         locale, "checks.requiredFields", String.join(Messages.text(locale, "listSeparator"), missing)));
@@ -129,8 +123,6 @@ final class DataChecks {
             warnings.add(Messages.text(locale, "checks.beforePurchase"));
         }
         checkedDate(spec.getCancelledAt(), Messages.text(locale, "field.cancelledAt"), warnings, locale);
-        checkedDate(spec.getExpiresAt(), Messages.text(locale, "field.expiresAt"), warnings, locale);
-        checkedDate(spec.getFirstPurchaseAt(), Messages.text(locale, "field.firstPurchaseAt"), warnings, locale);
         var override =
                 checkedDate(spec.getNextRenewalAt(), Messages.text(locale, "field.nextRenewalAt"), warnings, locale);
         var overrideEnd =
@@ -162,10 +154,6 @@ final class DataChecks {
                 warnings.add(Messages.text(locale, "checks.balanceStale"));
         }
         return warnings;
-    }
-
-    static List<String> record(SimCard.ExpenseRecord record, SimCard.CardSpec card, LocalDate today) {
-        return record(record, card, today, Locale.SIMPLIFIED_CHINESE);
     }
 
     static List<String> record(SimCard.ExpenseRecord record, SimCard.CardSpec card, LocalDate today, Locale locale) {

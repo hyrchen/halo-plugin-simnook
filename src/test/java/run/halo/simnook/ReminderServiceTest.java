@@ -22,58 +22,47 @@ import run.halo.app.notification.NotificationReasonEmitter;
 
 class ReminderServiceTest {
     @Test
-    void usesShanghaiDateAndOnlyRemindsOnSelectedDays() {
+    void matchesOnlySelectedDaysEventsAndCards() {
         var f = new Fixture();
         assertThat(RenewalSettings.today(Clock.fixed(Instant.parse("2026-11-07T16:00:00Z"), ZoneOffset.UTC)))
                 .isEqualTo(LocalDate.of(2026, 11, 8));
         var today = LocalDate.of(2026, 11, 8);
-        f.channel.getSpec().setEvents(List.of("upcoming"));
-        f.channel.getSpec().setDaysAhead(List.of(30, 7, 1));
-        f.card.getSpec().setNextRenewalAt("2026-11-15");
-        assertThat(ReminderService.matches(f.channel, f.card, today)).isTrue();
-        f.card.getSpec().setNextRenewalAt("2026-11-14");
-        assertThat(ReminderService.matches(f.channel, f.card, today)).isFalse();
-        f.card.getSpec().setNextRenewalAt("2026-12-08");
-        assertThat(ReminderService.matches(f.channel, f.card, today)).isTrue();
-        f.card.getSpec().setNextRenewalAt("2026-11-09");
-        assertThat(ReminderService.matches(f.channel, f.card, today)).isTrue();
-        // 未选中当天（0 天）时，到期当天不提醒。
-        f.card.getSpec().setNextRenewalAt("2026-11-08");
-        assertThat(ReminderService.matches(f.channel, f.card, today)).isFalse();
-    }
+        var spec = f.channel.getSpec();
+        spec.setEvents(List.of("upcoming"));
+        spec.setDaysAhead(List.of(30, 7, 1));
+        Map.of("2026-12-08", true, "2026-11-15", true, "2026-11-14", false, "2026-11-09", true, "2026-11-08", false)
+                .forEach((date, expected) -> {
+                    f.card.getSpec().setNextRenewalAt(date);
+                    assertThat(ReminderService.matches(f.channel, f.card, today))
+                            .as(date)
+                            .isEqualTo(expected);
+                });
 
-    @Test
-    void windowAndOverdueFollowEventsAndCardScope() {
-        var f = new Fixture();
-        var today = LocalDate.of(2026, 11, 8);
-        f.channel.getSpec().setEvents(List.of("window"));
+        spec.setEvents(List.of("window"));
         f.card.getSpec().setNextRenewalAt("2026-11-07");
         f.card.getSpec().setNextRenewalEnd("2026-11-09");
         assertThat(ReminderService.matches(f.channel, f.card, today)).isTrue();
         f.card.getSpec().setNextRenewalEnd("2026-11-07");
         assertThat(ReminderService.matches(f.channel, f.card, today)).isFalse();
-        f.channel.getSpec().setEvents(List.of("overdue"));
+        spec.setEvents(List.of("overdue"));
         assertThat(ReminderService.matches(f.channel, f.card, today)).isTrue();
-        f.channel.getSpec().setCardScope("selected");
-        f.channel.getSpec().setCards(List.of("other-card"));
+        spec.setCardScope("selected");
+        spec.setCards(List.of("other-card"));
         assertThat(ReminderService.matches(f.channel, f.card, today)).isFalse();
-        f.channel.getSpec().setCards(List.of("a"));
+        spec.setCards(List.of("a"));
         assertThat(ReminderService.matches(f.channel, f.card, today)).isTrue();
-        f.card.getSpec().setCancelled(true);
+        f.card.getSpec().setCancelledAt("2026-11-01");
         assertThat(ReminderService.matches(f.channel, f.card, today)).isFalse();
     }
 
     @Test
-    void legacyChannelsGetDefaultsAndWaitForTheirSendTime() {
+    void waitsForEachChannelSendTime() {
         var f = new Fixture();
-        var view = ReminderService.viewOf(f.channel);
-        assertThat(view.sendTime()).isEqualTo("09:00");
-        assertThat(view.cardScope()).isEqualTo("all");
-        assertThat(view.daysAhead()).containsExactly(7, 3, 1);
-        // 固定时钟为上海 09:00，发送时间设为 10:00 时本轮不发送。
+        // 固定时钟为上海 09:00，发送时间 10:00 的渠道本轮不发送。
         f.channel.getSpec().setSendTime("10:00");
         f.service.check().block();
         verifyNoInteractions(f.emitter);
+        assertThat(ReminderService.viewOf(f.channel).nextRunAt()).endsWith("T02:00:00Z");
     }
 
     @Test
@@ -119,53 +108,33 @@ class ReminderServiceTest {
         assertThat(view.lastSubmittedAt()).isNull();
     }
 
+    private static ReminderService.ChannelInput input(
+            String name, List<String> events, String sendTime, String scope, List<String> cards, List<Integer> days) {
+        return new ReminderService.ChannelInput(
+                name, "测试", true, List.of("admin"), events, sendTime, scope, cards, days, name == null ? null : 9L);
+    }
+
     @Test
     void rejectsInvalidInputStaleVersionsAndUnauthorizedRecipients() {
         var f = new Fixture();
+        var upcoming = List.of("upcoming");
         assertThatThrownBy(() -> ReminderService.validate(new ReminderService.ChannelInput(
                         null, "", true, List.of(), List.of(), "09:00", "all", List.of(), List.of(7), null)))
                 .hasMessageContaining("渠道名称");
-        assertThatThrownBy(() -> ReminderService.validate(new ReminderService.ChannelInput(
-                        null,
-                        "测试",
-                        true,
-                        List.of("admin"),
-                        List.of("upcoming"),
-                        "9点",
-                        "all",
-                        List.of(),
-                        List.of(7),
-                        null)))
+        assertThatThrownBy(() -> ReminderService.validate(input(null, upcoming, "9点", "all", List.of(), List.of(7))))
                 .hasMessageContaining("HH:mm");
-        assertThatThrownBy(() -> ReminderService.validate(new ReminderService.ChannelInput(
-                        null,
-                        "测试",
-                        true,
-                        List.of("admin"),
-                        List.of("upcoming"),
-                        "09:00",
-                        "selected",
-                        List.of(),
-                        List.of(7),
-                        null)))
+        assertThatThrownBy(() ->
+                        ReminderService.validate(input(null, upcoming, "09:00", "selected", List.of(), List.of(7))))
                 .hasMessageContaining("号卡");
-        assertThatThrownBy(() -> ReminderService.validate(new ReminderService.ChannelInput(
-                        null,
-                        "测试",
-                        true,
-                        List.of("admin"),
-                        List.of("upcoming"),
-                        "09:00",
-                        "all",
-                        List.of(),
-                        List.of(),
-                        null)))
+        assertThatThrownBy(() -> ReminderService.validate(input(null, upcoming, "09:00", "all", List.of(), List.of())))
                 .hasMessageContaining("天数");
-        var input = new ReminderService.ChannelInput(
-                "channel-a", "测试", true, List.of("admin"), List.of("upcoming"), null, null, null, null, 9L);
-        assertThatThrownBy(() -> f.service.save(input).block()).hasMessageContaining("409");
+        // 只提醒逾期时不需要天数。
+        ReminderService.validate(input(null, List.of("overdue"), "09:00", "all", List.of(), List.of()));
+
+        var stale = input("channel-a", upcoming, "09:00", "all", List.of(), List.of(7));
+        assertThatThrownBy(() -> f.service.save(stale).block()).hasMessageContaining("409");
         when(f.roles.listPermissions(anySet())).thenReturn(Flux.empty());
-        assertThatThrownBy(() -> f.service.save(input).block()).hasMessageContaining("无号卡管理权限");
+        assertThatThrownBy(() -> f.service.save(stale).block()).hasMessageContaining("无号卡管理权限");
         verifyNoInteractions(f.notifications);
     }
 
@@ -187,7 +156,8 @@ class ReminderServiceTest {
         assertThat(saved.enabled()).isFalse();
         assertThat(saved.sendTime()).isEqualTo("08:30");
         assertThat(saved.cards()).containsExactly("a");
-        assertThat(saved.daysAhead()).containsExactly(30, 7, 1);
+        // 未勾选「即将到期」时不保留天数。
+        assertThat(saved.daysAhead()).isEmpty();
         verifyNoInteractions(f.notifications);
         f.service.delete("channel-a", 1L).block();
         verify(f.notifications, times(2)).unsubscribe(any(), any());
@@ -201,7 +171,7 @@ class ReminderServiceTest {
         final RoleService roles = mock(RoleService.class);
         final ExternalLinkProcessor links = mock(ExternalLinkProcessor.class);
         final ReminderChannel channel = new ReminderChannel();
-        final SimCard card = BackupServiceTest.card("a");
+        final SimCard card = Fixtures.card("a");
         final ReminderService service;
 
         Fixture() {
@@ -213,6 +183,7 @@ class ReminderServiceTest {
             spec.setDisplayName("提醒");
             spec.setRecipients(List.of("admin", "other"));
             spec.setEvents(List.of("upcoming", "window", "overdue"));
+            spec.setDaysAhead(List.of(7, 3, 1));
             spec.setEnabled(true);
             channel.setSpec(spec);
             card.getSpec().setNextRenewalAt("2026-11-09");

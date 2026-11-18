@@ -9,9 +9,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
-import java.util.regex.Pattern;
 
-/** 复现 SIMerald v0.2.0 中文模板公式，兼容已有 Halo 卡片的手填覆盖。 */
+/** 号卡的日期、状态与紧急度推导，访客视图、管理视图和提醒共用。 */
 record CardFacts(
         String expiry,
         String renewal,
@@ -38,7 +37,6 @@ record CardFacts(
                 .orElse(null);
     }
 
-    private static final Pattern FIRST_DIGITS = Pattern.compile("[0-9]+");
     private static final Comparator<String> DATES = Comparator.nullsFirst(Comparator.naturalOrder());
     static final Comparator<SimCard.ExpenseRecord> RECORD_ORDER = Comparator.comparing(
                     (SimCard.ExpenseRecord record) -> date(record.getDate()), DATES)
@@ -46,30 +44,27 @@ record CardFacts(
 
     static CardFacts from(SimCard.CardSpec spec, LocalDate today) {
         var records = records(spec);
+        // 有效期取交易日期最新、且填写了延长日期的那条消费记录。
         var recent = records.stream()
                 .filter(record -> date(record.getDate()) != null && date(record.getExtendsTo()) != null)
                 .max(RECORD_ORDER)
                 .orElse(null);
-        var expiry = date(spec.getExpiresAt());
-        if (expiry == null && recent != null) expiry = date(recent.getExtendsTo());
+        var expiry = recent == null ? null : date(recent.getExtendsTo());
         var start = date(spec.getNextRenewalAt());
         if (start == null) start = expiry;
         var end = date(spec.getNextRenewalEnd());
         if (start == null || (end != null && end.compareTo(start) < 0)) end = null;
 
-        var cancelled = Boolean.TRUE.equals(spec.getCancelled()) || date(spec.getCancelledAt()) != null;
+        var cancelled = date(spec.getCancelledAt()) != null;
         var expired = expiry != null && LocalDate.parse(expiry).isBefore(today);
         var status = cancelled ? "cancelled" : expired ? "expired" : "active";
         var statusLabel = cancelled ? "已注销" : expired ? "已过期" : "使用中";
-        var first = date(spec.getFirstPurchaseAt());
-        if (first == null) {
-            first = records.stream()
-                    .map(SimCard.ExpenseRecord::getDate)
-                    .map(CardFacts::date)
-                    .filter(Objects::nonNull)
-                    .min(String::compareTo)
-                    .orElse(null);
-        }
+        var first = records.stream()
+                .map(SimCard.ExpenseRecord::getDate)
+                .map(CardFacts::date)
+                .filter(Objects::nonNull)
+                .min(String::compareTo)
+                .orElse(null);
         return new CardFacts(
                 expiry,
                 cancelled ? null : start,
@@ -143,24 +138,11 @@ record CardFacts(
     }
 
     static String typeKind(SimCard.CardSpec spec) {
-        if (present(spec.getTypeKind())) return spec.getTypeKind();
-        var label = text(spec.getTypeLabel()).toLowerCase(Locale.ROOT);
-        if (label.contains("虚拟") || label.contains("virtual") || label.contains("app")) return "virtual";
-        if (label.contains("实体") || label.contains("physical")) return "physical";
-        if (label.contains("卡托") || label.contains("adapter") || label.contains("estk") || label.contains("euicc"))
-            return "adapter";
-        return label.contains("esim") ? "embedded" : "physical";
+        return present(spec.getTypeKind()) ? spec.getTypeKind() : "physical";
     }
 
     static int cycleDays(SimCard.CardSpec spec) {
-        if (spec.getCycleDays() != null) return spec.getCycleDays();
-        var matcher = FIRST_DIGITS.matcher(text(spec.getCycleLabel()));
-        if (!matcher.find()) return 0;
-        try {
-            return Integer.parseInt(matcher.group());
-        } catch (NumberFormatException tooLarge) {
-            return 0; // 文本里超出整数范围的数字不是有效续费天数。
-        }
+        return spec.getCycleDays() == null ? 0 : spec.getCycleDays();
     }
 
     static boolean present(String value) {
@@ -169,29 +151,17 @@ record CardFacts(
 
     static String typeColor(SimCard.CardSpec spec) {
         if (present(spec.getTypeColor())) return spec.getTypeColor();
-        return switch (text(spec.getTypeKind())) {
-            case "physical" -> "brown";
+        return switch (typeKind(spec)) {
             case "embedded" -> "blue";
             case "adapter" -> "purple";
             case "virtual" -> "gray";
-            default -> "default";
+            default -> "brown";
         };
     }
 
-    /** 后台和前台共用的卡片类型文案：手填的具体类型优先，否则按类型代码翻译。 */
+    /** 后台和前台共用的卡片类型文案。 */
     static String typeText(SimCard.CardSpec spec, Locale locale) {
-        return present(spec.getTypeLabel()) ? spec.getTypeLabel() : Messages.text(locale, "type." + typeKind(spec));
-    }
-
-    static String typeLabel(SimCard.CardSpec spec) {
-        if (present(spec.getTypeLabel())) return spec.getTypeLabel();
-        return switch (text(spec.getTypeKind())) {
-            case "physical" -> "实体 SIM";
-            case "embedded" -> "eSIM · 直写手机";
-            case "adapter" -> "eSIM · 卡托";
-            case "virtual" -> "虚拟号码（仅 App）";
-            default -> "";
-        };
+        return Messages.text(locale, "type." + typeKind(spec));
     }
 
     static String date(String value) {

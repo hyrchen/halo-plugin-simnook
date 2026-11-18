@@ -28,8 +28,6 @@ const filteredCards = computed(() => filterCardViews(cards.value, { keyword: key
 const total = computed(() => filteredCards.value.length)
 const pagedCards = computed(() => filteredCards.value.slice((page.value - 1) * size.value, page.value * size.value))
 const countryOptions = computed(() => [...new Set(cards.value.map(card => card.countryName).filter((value): value is string => Boolean(value)))].sort().map(value => ({ value, label: value })))
-// 后端紧急度文案带「⓪①…」排序前缀供前台使用，后台列表只展示文字部分。
-const urgencyText = (card: ManagedCardView) => card.urgency?.replace(/^[\u2460-\u2473\u24EA]\s*/u, '') ?? ''
 const urgencyState = (code?: string) =>
  code === 'overdue' ? 'error' : ['window', 'days3', 'days7'].includes(code ?? '') ? 'warning' : ['noDate', 'cancelled'].includes(code ?? '') ? 'default' : 'success'
 const renewalDate = (card: ManagedCardView) => [card.nextRenewalAt, card.nextRenewalEnd].filter(Boolean).join(' ~ ')
@@ -168,7 +166,7 @@ function normalize(spec: CardSpec): CardSpec {
   if (result[key] === '' || result[key] == null) delete result[key]
   else result[key] = Number(result[key])
  }
- for (const key of ['expiresAt', 'firstPurchaseAt', 'nextRenewalAt', 'nextRenewalEnd', 'cancelledAt', 'balanceUpdatedAt', 'currency', 'typeColor', 'typeKind']) {
+ for (const key of ['nextRenewalAt', 'nextRenewalEnd', 'cancelledAt', 'balanceUpdatedAt', 'currency', 'typeColor', 'typeKind']) {
   if (!result[key]) delete result[key]
  }
  const country = result.countryName?.trim() ?? ''
@@ -191,7 +189,7 @@ function normalize(spec: CardSpec): CardSpec {
  return result
 }
 function validRenewalWindow(spec: CardSpec): boolean {
- if (!spec.nextRenewalEnd || spec.cancelled || spec.cancelledAt) return true
+ if (!spec.nextRenewalEnd || spec.cancelledAt) return true
  const start = spec.nextRenewalAt || entryExpiry(spec)
  if (start && spec.nextRenewalEnd >= start) return true
  formTab.value = 'renewal'
@@ -284,7 +282,7 @@ function openFrontend() { window.open('/simnook/', '_blank', 'noopener,noreferre
    <template #end>
     <VEntityField v-if="renewalDate(card)" :description="renewalDate(card)" />
     <VEntityField :description="t('消费记录数量', card.history?.length || 0)" />
-    <VEntityField v-if="card.status !== 'cancelled'"><template #description><VStatusDot :state="urgencyState(card.urgencyCode)" :animate="card.urgencyCode === 'overdue'" :text="urgencyText(card)" /></template></VEntityField>
+    <VEntityField v-if="card.status !== 'cancelled'"><template #description><VStatusDot :state="urgencyState(card.urgencyCode)" :animate="card.urgencyCode === 'overdue'" :text="card.urgency" /></template></VEntityField>
     <VEntityField><template #description><VTag :theme="card.status === 'active' ? 'default' : 'danger'">{{ card.statusLabel }}</VTag></template></VEntityField>
    </template>
    <template #dropdownItems>
@@ -334,11 +332,8 @@ function openFrontend() { window.open('/simnook/', '_blank', 'noopener,noreferre
     <div class="simnook-form-grid grid grid-cols-1 gap-x-4 md:grid-cols-2">
      <FormKit name="nextRenewalAt" type="date" :label="t('下次续费起始日')" :help="t('留空时跟随有效期。')" />
      <FormKit name="nextRenewalEnd" type="date" :label="t('续费截止日')" :help="t('可选。填写后，前台显示续费日期区间。')" />
-     <FormKit v-if="editing?.spec.expiresAt" name="expiresAt" type="date" :label="t('有效期（旧版手填）')" :help="t('清空后，按交易日期最近一条填写了延长日期的记录计算，同日取最晚。')" />
-     <FormKit v-if="editing?.spec.firstPurchaseAt" name="firstPurchaseAt" type="date" :label="t('首次购买日期（旧版手填）')" :help="t('清空后取最早一笔消费日期。')" />
      <FormKit name="cancelledAt" type="date" :label="t('停用日期')" :help="t('填写后自动标记为已注销。')" />
     </div>
-    <FormKit v-if="editing?.spec.cancelled" name="cancelled" type="checkbox" :label="t('已注销（旧版标记）')" />
     <FormKit name="records" type="array" :label="t('消费记录')" :max="1000" :item-labels="recordLabels">
      <template #default="{ value }">
       <ExpenseFields :record="value ?? {}" :initialize="Boolean(value)" :card="form" :types="withExisting(recordTypes, ...(form.records ?? []).map(record => record.type)).map(option => ({ ...option, label: recordTypeLabel(option.value) }))" :currencies="withExisting(currencies, ...(form.records ?? []).map(record => record.currency))" />
@@ -353,8 +348,6 @@ function openFrontend() { window.open('/simnook/', '_blank', 'noopener,noreferre
      <FormKit name="account" type="text" :label="t('账户名称')" :help="t('仅记录名称，不存储密码、密钥或令牌。')" />
     </div>
     <FormKit name="services" type="select" :label="t('绑定的服务')" :options="withExisting(services, ...(form.services ?? []))" multiple searchable allow-create />
-    <FormKit v-if="editing?.spec.typeLabel" name="typeLabel" type="text" :label="t('具体卡片类型')" />
-    <FormKit v-if="editing?.spec.dataCheck" name="dataCheck" type="textarea" :label="t('旧版数据检查备注')" />
    </div>
    <div v-show="formTab === 'appearance'">
     <div class="simnook-form-grid grid grid-cols-1 gap-x-4 md:grid-cols-2">
@@ -374,7 +367,7 @@ function openFrontend() { window.open('/simnook/', '_blank', 'noopener,noreferre
  <VModal v-if="check" :title="`${check.name} · ${t('数据检查')}`" :width="640" mount-to-body @close="check = undefined">
   <VEntityContainer>
    <VEntity>
-    <template #start><VEntityField :title="check.status === 'cancelled' ? check.statusLabel : `${check.statusLabel} · ${urgencyText(check)}`" :description="check.dataCheck || t('号卡没有检查提示')" /></template>
+    <template #start><VEntityField :title="check.status === 'cancelled' ? check.statusLabel : `${check.statusLabel} · ${check.urgency}`" :description="check.dataCheck || t('号卡没有检查提示')" /></template>
    </VEntity>
    <VEntity v-for="record in check.history?.filter(item => item.checks?.length)" :key="record.id">
     <template #start><VEntityField :title="record.title?.trim() || [record.date, recordTypeLabel(record.type)].map(value => value?.trim()).filter(Boolean).join(' · ') || t('未命名消费记录')" :description="record.checks?.join(locale.startsWith('zh') ? '；' : '; ')" /></template>

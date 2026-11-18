@@ -5,7 +5,6 @@
  * provide every key. Messages are compiled at runtime by vue-i18n's JIT compiler, which does not use
  * `eval`, so the `script-src 'self'` CSP keeps working.
  */
-import type { ErrorParams } from '@shared/types'
 import { createI18n } from 'vue-i18n'
 import en from './locales/en'
 import zhCN from './locales/zh-CN'
@@ -50,29 +49,6 @@ export function currentLocale(): AppLocale {
 export function setLocale(locale: AppLocale): void {
   i18n.global.locale.value = locale
   document.documentElement.lang = locale
-}
-
-/** Translates a key built at runtime (error codes, option values); returns `fallback` when the key does not exist */
-export function translateKey(key: string, params: Record<string, unknown> = {}, fallback = key): string {
-  const { t, te } = i18n.global as unknown as {
-    t: (key: string, params: Record<string, unknown>) => string
-    te: (key: string) => boolean
-  }
-  return te(key) ? t(key, params) : fallback
-}
-
-/**
- * Translates an API or sync error code. A `cause` param holding another code is translated first, so
- * nested failures (e.g. a Notion error inside a sync warning) read naturally. `fallback` is shown for
- * unknown codes and for messages stored before codes existed.
- */
-export function translateError(code: string | null | undefined, params: ErrorParams | null | undefined, fallback: string): string {
-  if (!code)
-    return fallback
-  const values: Record<string, unknown> = { ...params }
-  if (typeof params?.cause === 'string')
-    values.cause = translateKey(`errors.${params.cause}`, values, String(params.message ?? params.cause))
-  return translateKey(`errors.${code}`, values, fallback)
 }
 
 /** Locale-aware number formatting (grouping separators, decimals) */

@@ -5,12 +5,12 @@ import java.math.BigDecimal;
 import java.util.List;
 import lombok.Data;
 
-/** 为既有动态管理视图提供 OpenAPI 模型，实际响应仍沿用字段白名单。 */
+/** 管理视图的 OpenAPI 模型，供后台生成类型；实际响应由 ManagementEndpoint 按字段白名单组装。 */
 public final class ManagementModels {
     private ManagementModels() {}
 
     @Schema(name = "ManagedCardViews")
-    public record CardViews(List<ManagedCardView> cards, boolean demo, boolean full) {}
+    public record CardViews(List<ManagedCardView> cards, boolean full) {}
 
     public record QuickRenewalRequest(
             String expectedVersion, SimCard.ExpenseRecord record, String nextRenewalAt, String nextRenewalEnd) {}
