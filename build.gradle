@@ -107,7 +107,7 @@ haloPlugin {
         groupingRules {
             simnookApis {
                 displayName = 'SIMnook API'
-                pathsToMatch = ['/apis/simnook.halo.run/v1alpha1/**', '/apis/console.api.simnook.halo.run/v1alpha1/**']
+                pathsToMatch = ['/apis/simnook.halo.run/v1alpha1/simcards/**', '/apis/console.api.simnook.halo.run/v1alpha1/**']
             }
         }
         groupedApiMappings = ['/v3/api-docs/simnookApis': 'simnook.json']
@@ -115,7 +115,8 @@ haloPlugin {
     }
 }
 
-// 后台 API Client 从 apiDocsUrl 上运行的 Halo（已安装本插件）的 OpenAPI 文档生成，提醒渠道接口也在同一分组。
+// 后台 API Client 从 apiDocsUrl 上运行的 Halo（已安装本插件）的 OpenAPI 文档生成。
+// 分组只含号卡的通用 CRUD 与控制台自定义接口，不含渠道的通用 CRUD，因此生成结果没有用不到的客户端。
 // 本机没有 Docker 时，可直接用 Halo 发布的 JAR 在 127.0.0.1:18090 启动，并配置 springdoc 的 simnookApis 分组。
 // Halo 2.27 会把路由上声明的路径/查询参数输出两份，生成前按 name + in 去重，否则会生成 name2 这类参数。
 // Windows 绝对路径必须使用 URI，否则 OpenAPI 解析器会把盘符当作协议。

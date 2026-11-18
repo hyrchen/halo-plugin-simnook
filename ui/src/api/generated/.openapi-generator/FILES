@@ -2,7 +2,6 @@
 .npmignore
 .openapi-generator-ignore
 api.ts
-api/reminder-channel-v1alpha1-api.ts
 api/reminder-channels-api.ts
 api/sim-card-v1alpha1-api.ts
 api/simnook-management-v1alpha1-api.ts
@@ -35,14 +34,11 @@ models/move-operation.ts
 models/quick-renewal-request.ts
 models/reminder-card-option.ts
 models/reminder-channel-input.ts
-models/reminder-channel-list.ts
 models/reminder-channel-view.ts
-models/reminder-channel.ts
 models/reminder-channels-view.ts
 models/reminder-recipient.ts
 models/remove-operation.ts
 models/replace-operation.ts
 models/sim-card-list.ts
 models/sim-card.ts
-models/spec.ts
 models/test-operation.ts

@@ -14,7 +14,6 @@
 
 
 
-export * from './api/reminder-channel-v1alpha1-api';
 export * from './api/reminder-channels-api';
 export * from './api/sim-card-v1alpha1-api';
 export * from './api/simnook-management-v1alpha1-api';
