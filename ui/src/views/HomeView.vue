@@ -7,6 +7,7 @@ import { CardSpecPublicFieldsEnum, SimCardV1alpha1Api, SimnookManagementV1alpha1
 import ExpenseFields from './ExpenseFields.vue'
 import QuickRenewal from './QuickRenewal.vue'
 import ReminderPanel from './ReminderPanel.vue'
+import BackupView from './BackupView.vue'
 import { filterCardViews, tidyPhoneNumber, URGENCY_CODES } from '../utils/cardManagement'
 import { BUILTIN_CARRIERS, builtinLogoOptions, carrierLogo } from '../../../frontend/shared/carriers'
 import { CYCLE_OPTIONS, cardName, copyCardConfiguration, cycleChoice, entryExpiry, localDay } from '../utils/cardEntry'
@@ -17,7 +18,7 @@ const api = new SimCardV1alpha1Api(undefined, '', axiosInstance)
 const managementApi = new SimnookManagementV1alpha1Api(undefined, '', axiosInstance)
 const tab = ref('cards')
 const reminderPanel = ref<InstanceType<typeof ReminderPanel>>()
-const tabs = computed(() => [{ id: 'cards', label: t('号卡') }, { id: 'todo', label: t('续费提醒') }])
+const tabs = computed(() => [{ id: 'cards', label: t('号卡') }, { id: 'todo', label: t('续费提醒') }, { id: 'backup', label: t('备份恢复') }])
 const cards = ref<ManagedCardView[]>([])
 const page = ref(1), size = ref(10)
 const keyword = ref('')
@@ -239,13 +240,14 @@ function openFrontend() { window.open('/simnook/', '_blank', 'noopener,noreferre
   <template #actions>
    <VButton @click="openFrontend">{{ t('打开前台页面') }}</VButton>
    <VButton v-if="tab === 'cards'" type="secondary" @click="edit()">{{ t('新增号卡') }}</VButton>
-   <VButton v-else type="secondary" :disabled="!reminderPanel?.ready" @click="reminderPanel?.add()">{{ t('添加渠道') }}</VButton>
+   <VButton v-else-if="tab === 'todo'" type="secondary" :disabled="!reminderPanel?.ready" @click="reminderPanel?.add()">{{ t('添加渠道') }}</VButton>
   </template>
  </VPageHeader>
  <div class="m-0 md:m-4">
  <VCard :body-class="['!p-0']">
   <template #header><VTabbar v-model:active-id="tab" :items="tabs" class="w-full" type="outline" /></template>
  <ReminderPanel v-if="tab === 'todo'" ref="reminderPanel" />
+ <BackupView v-else-if="tab === 'backup'" />
   <template v-else>
   <!-- 沿用 Halo 列表页筛选栏的结构：灰底条，搜索在左，筛选靠右；筛选顺序与列表从左到右的展示顺序一致。 -->
   <div class="block w-full bg-gray-50 px-4 py-3">
