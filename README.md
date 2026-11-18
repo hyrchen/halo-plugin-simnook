@@ -2,7 +2,7 @@
   <img src="https://raw.githubusercontent.com/sunnyhmz7010/halo-plugin-simnook/main/src/main/resources/logo.svg" alt="SIMnook Logo" width="96" />
   <h1>SIMnook</h1>
   <p>在 Halo 中管理号卡与消费记录，并提供公开的 SIM/eSIM 收藏展示墙</p>
-  <p>公开号卡墙派生自 [SIMerald](https://github.com/BurningSky0306/SIMerald) 与 [Komari Emerald 主题](https://github.com/Tokinx/komari-theme-emerald)，相关代码沿用其 MIT 许可证。在此谨向原作者致以诚挚谢意，感谢其作出的原创性贡献。</p>
+  <p>公开号卡墙派生自 <a href="https://github.com/BurningSky0306/SIMerald">SIMerald</a> 与 <a href="https://github.com/Tokinx/komari-theme-emerald">Komari Emerald 主题</a>，相关代码沿用其 MIT 许可证。在此谨向原作者致以诚挚谢意，感谢其作出的原创性贡献。</p>
 </div>
 
 <p align="center">
@@ -24,9 +24,9 @@
 
 手里的 eSIM 和实体卡一多，每张卡的续费周期都不一样，靠备忘录记到期日很容易漏，续费后又算不清每张卡到底花了多少。记在表格里在手机上翻着也不方便，直接公开又担心把完整号码暴露出去。
 
-- 到期前通过 Halo 的站内信或邮件收到提醒，不用自己盯着日历
-- 想给访客看自己在用哪些号卡，但只公开国家、余下天数这类信息
-- 每笔续费的金额、汇率和延长日期都留底，随时能算回人民币
+- 每张卡的续费周期都不一样，全靠备忘录和日历盯着，漏掉一次就可能被停机甚至回收号码
+- 续费与保号的支出散落在邮件和支付记录里，一年下来算不清每张卡到底花了多少
+- 想分享自己手上有哪些号卡，直接公开又等于把完整号码和消费金额一起暴露出去
 
 ## 📸 截图预览
 
