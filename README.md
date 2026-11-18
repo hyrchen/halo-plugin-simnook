@@ -29,7 +29,7 @@
 
 ## 📸 截图预览
 
-![SIMnook 号卡墙](https://raw.githubusercontent.com/sunnyhmz7010/halo-plugin-simnook/main/docs/images/home.webp)
+![SIMnook 号卡墙](https://raw.githubusercontent.com/sunnyhmz7010/halo-plugin-simnook/main/home.webp)
 
 ## 🚀 核心能力
 
@@ -88,7 +88,7 @@ halo-plugin-simnook/
 ├── src/main/resources/   # plugin.yaml、设置表单、通知模板与公开页模板
 ├── ui/                   # Halo 控制台界面
 ├── frontend/             # 公开号卡墙页面
-├── docs/images/          # README 截图
+├── home.webp             # README 截图
 └── build.gradle          # 构建配置
 ```
 
