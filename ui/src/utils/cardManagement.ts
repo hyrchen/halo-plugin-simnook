@@ -2,13 +2,21 @@ import type { ManagedCardView } from '../api/generated'
 
 export const URGENCY_CODES = ['window', 'overdue', 'days3', 'days7', 'days15', 'days30', 'days60', 'beyond', 'noDate', 'cancelled']
 
-export function filterCardViews(cards: ManagedCardView[], filters: { keyword: string; country: string; status: string; urgency: string }): ManagedCardView[] {
+/** 号码只保留开头的 + 和数字，去掉空格、全角空格、连字符、括号和点。 */
+export function compactNumber(value?: string): string | undefined {
+ const trimmed = value?.trim()
+ if (!trimmed) return undefined
+ return trimmed.replace(/[\s\u3000\-–—().·]/g, '')
+}
+
+export function filterCardViews(cards: ManagedCardView[], filters: { keyword: string; country: string; status: string; urgency: string; type?: string }): ManagedCardView[] {
  const keyword = filters.keyword.trim().toLocaleLowerCase()
  const digits = keyword.replace(/[^0-9]/g, '')
  return cards.filter(card => {
   if (filters.country && card.countryName !== filters.country) return false
   if (filters.status && card.status !== filters.status) return false
   if (filters.urgency && card.urgencyCode !== filters.urgency) return false
+  if (filters.type && card.typeKind !== filters.type) return false
   if (!keyword) return true
   return [card.name, card.number, card.carrier].some(value => value?.toLocaleLowerCase().includes(keyword))
    || Boolean(digits && /^[+\d\s()-]+$/.test(keyword) && card.number?.replace(/[^0-9]/g, '').includes(digits))

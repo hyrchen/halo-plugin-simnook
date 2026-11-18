@@ -178,6 +178,11 @@ record CardFacts(
         };
     }
 
+    /** 后台和前台共用的卡片类型文案：手填的具体类型优先，否则按类型代码翻译。 */
+    static String typeText(SimCard.CardSpec spec, Locale locale) {
+        return present(spec.getTypeLabel()) ? spec.getTypeLabel() : Messages.text(locale, "type." + typeKind(spec));
+    }
+
     static String typeLabel(SimCard.CardSpec spec) {
         if (present(spec.getTypeLabel())) return spec.getTypeLabel();
         return switch (text(spec.getTypeKind())) {

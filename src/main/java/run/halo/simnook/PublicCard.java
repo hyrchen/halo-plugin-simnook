@@ -8,9 +8,13 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Pattern;
 import java.util.stream.IntStream;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.json.JsonMapper;
 
 /** 公开字段白名单。禁止在这里序列化 CardSpec 或 ExpenseRecord。 */
 @JsonInclude(JsonInclude.Include.ALWAYS)
@@ -45,6 +49,7 @@ public record PublicCard(
         List<PublicRecord> history) {
 
     private static final Pattern NAME_SEPARATOR = Pattern.compile("\\s*[·•|]\\s*");
+    private static final JsonMapper JSON = JsonMapper.builder().build();
     static final Comparator<SimCard> SOURCE_ORDER = Comparator.comparing(
                     (SimCard card) -> card.getMetadata().getCreationTimestamp(),
                     Comparator.nullsLast(Comparator.naturalOrder()))
@@ -128,6 +133,37 @@ public record PublicCard(
                 facts.urgency(),
                 Objects.requireNonNullElse(spec.getOrder(), sourceOrder),
                 history);
+    }
+
+    /** 默认私有、可按号卡单独公开的字段。新增字段时同步 SimCard 的 allowableValues 和后台可见性选项。 */
+    static final List<String> OPTIONAL_PUBLIC_FIELDS =
+            List.of("number", "type", "device", "balance", "account", "services");
+
+    /** 匿名访客视图：白名单基础字段，再按号卡设置追加用户选择公开的字段。 */
+    static Map<String, Object> visitorView(SimCard card, LocalDate today, int sourceOrder, Locale locale) {
+        var spec = card.getSpec();
+        var selected = spec.getPublicFields() == null
+                ? List.<String>of()
+                : OPTIONAL_PUBLIC_FIELDS.stream()
+                        .filter(spec.getPublicFields()::contains)
+                        .toList();
+        Map<String, Object> view = JSON.convertValue(from(card, today, sourceOrder), new TypeReference<>() {});
+        for (var field : selected) {
+            switch (field) {
+                case "number" -> view.put("number", text(spec.getNumber()));
+                case "type" -> view.put("type", CardFacts.typeText(spec, locale));
+                case "device" -> view.put("device", spec.getDevice());
+                case "balance" -> {
+                    view.put("balance", spec.getBalance());
+                    view.put("balanceUpdatedAt", CardFacts.date(spec.getBalanceUpdatedAt()));
+                }
+                case "account" -> view.put("account", spec.getAccount());
+                case "services" -> view.put("services", spec.getServices() == null ? List.of() : spec.getServices());
+                default -> throw new IllegalStateException(field);
+            }
+        }
+        view.put("publicFields", selected);
+        return view;
     }
 
     static String recordId(String cardId, SimCard.ExpenseRecord record, int index) {

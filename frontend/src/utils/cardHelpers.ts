@@ -13,7 +13,6 @@ const { t } = i18n.global
 const CRITICAL_DAYS = 7
 const WARNING_DAYS = 15
 const LONG_TERM_DAYS = 36500
-const LEADING_ESIM_REGEX = /^eSIM\s*[·•]\s*/i
 const REGION_CODE_REGEX = /^[A-Z]{2}$/
 
 export type RenewalState = 'overdue' | 'critical' | 'warning' | 'normal' | 'long_term' | 'none'
@@ -288,10 +287,6 @@ export function getHoldInfo(card: SimCard): { days: number | null, percent: numb
     percent: (days % 365) / 365 * 100,
     sub: t('hold.since', { date: dayjs(card.firstPurchaseAt).format('YYYY-MM-DD') }),
   }
-}
-
-export function shortTypeLabel(type: string): string {
-  return type.replace(LEADING_ESIM_REGEX, '').trim() || type || t('card.uncategorized')
 }
 
 export function getNumberDisplay(card: SimCard): string {

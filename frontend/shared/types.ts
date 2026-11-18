@@ -12,6 +12,8 @@ export type CardKind = 'physical' | 'adapter' | 'embedded' | 'virtual'
 export type RecordKind = 'purchase' | 'renewal' | 'topup' | 'other'
 
 export type KeepAliveCode = 'topup' | 'addon' | 'use' | 'balanceChange' | 'autoCharge' | 'plan'
+/** 与后端 PublicCard.OPTIONAL_PUBLIC_FIELDS 一致。 */
+export type PublicField = 'number' | 'type' | 'device' | 'balance' | 'account' | 'services'
 export type ErrorParams = Record<string, string | number>
 
 /** Notion select option colors */
@@ -88,7 +90,9 @@ export interface SimCard {
   history: SimRecord[]
   /** Halo 附件的 Logo URL。 */
   logo?: string | null
-  // Fields below are returned only when authenticated
+  /** 访客接口中该号卡额外公开的字段；管理员视图不依赖它。 */
+  publicFields?: PublicField[]
+  // Fields below are returned when authenticated, or to visitors when listed in publicFields
   /** Raw card type label */
   type?: string
   balance?: number | null

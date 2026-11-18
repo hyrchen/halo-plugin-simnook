@@ -40,5 +40,5 @@ watch([type, date], ([kind, day], [previousKind, previousDay]) => {
  <FormKit v-show="currency !== 'CNY'" name="rate" type="number" :label="t('录入时汇率')" :value="record.rate" :validation="required && currency !== 'CNY' ? 'required|min:0.00000001' : 'min:0.00000001'" min="0.00000001" step="any" :help="t('填写这笔交易实际使用的汇率，1 单位原币对应的人民币金额。')" />
  <FormKit v-model="extendsTo" name="extendsTo" type="date" :label="t('本次有效期延至')" :validation="required ? 'required' : ''" />
  <VButton v-if="suggestion" size="sm" class="mb-4" :disabled="extendsTo === suggestion" @click="extendsTo = suggestion">{{ t('按周期填入日期', { date: suggestion }) }}</VButton>
- <FormKit v-model="title" name="title" type="text" :label="t('消费记录标题（私有）')" :help="t('根据号卡、消费类型和日期生成，可以修改。')" />
+ <FormKit v-model="title" name="title" type="text" :label="t('消费记录标题')" :help="t('根据号卡、消费类型和日期生成，可以修改。')" />
 </template>

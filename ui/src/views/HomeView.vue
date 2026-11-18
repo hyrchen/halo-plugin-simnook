@@ -7,7 +7,7 @@ import { SimCardV1alpha1Api, SimnookManagementV1alpha1Api, type SimCard, type Ca
 import ExpenseFields from './ExpenseFields.vue'
 import QuickRenewal from './QuickRenewal.vue'
 import ReminderPanel from './ReminderPanel.vue'
-import { filterCardViews, URGENCY_CODES } from '../utils/cardManagement'
+import { compactNumber, filterCardViews, URGENCY_CODES } from '../utils/cardManagement'
 import { BUILTIN_CARRIERS, builtinLogoOptions, carrierLogo } from '../../../frontend/shared/carriers'
 import { CYCLE_OPTIONS, cardName, copyCardConfiguration, cycleChoice, entryExpiry, localDay } from '../utils/cardEntry'
 
@@ -20,10 +20,10 @@ const tabs = computed(() => [{ id: 'cards', label: t('号卡') }, { id: 'todo', 
 const cards = ref<ManagedCardView[]>([])
 const page = ref(1), size = ref(10)
 const keyword = ref('')
-const countryFilter = ref<string>(), statusFilter = ref<string>(), urgencyFilter = ref<string>()
+const countryFilter = ref<string>(), statusFilter = ref<string>(), urgencyFilter = ref<string>(), typeFilter = ref<string>()
 const renewing = ref<ManagedCardView>()
 const urgencyLabels: Record<string, string> = { window: '续费窗口开放', overdue: '已逾期', days3: '未来 3 天内', days7: '未来 7 天内', days15: '未来 15 天内', days30: '未来 30 天内', days60: '未来 60 天内', beyond: '超过 60 天', noDate: '无续费日期', cancelled: '已注销' }
-const filteredCards = computed(() => filterCardViews(cards.value, { keyword: keyword.value, country: countryFilter.value ?? '', status: statusFilter.value ?? '', urgency: urgencyFilter.value ?? '' }))
+const filteredCards = computed(() => filterCardViews(cards.value, { keyword: keyword.value, country: countryFilter.value ?? '', status: statusFilter.value ?? '', urgency: urgencyFilter.value ?? '', type: typeFilter.value ?? '' }))
 const total = computed(() => filteredCards.value.length)
 const pagedCards = computed(() => filteredCards.value.slice((page.value - 1) * size.value, page.value * size.value))
 const countryOptions = computed(() => [...new Set(cards.value.map(card => card.countryName).filter((value): value is string => Boolean(value)))].sort().map(value => ({ value, label: value })))
@@ -33,13 +33,22 @@ const urgencyState = (code?: string) =>
  code === 'overdue' ? 'error' : ['window', 'days3', 'days7'].includes(code ?? '') ? 'warning' : ['noDate', 'cancelled'].includes(code ?? '') ? 'default' : 'success'
 const renewalDate = (card: ManagedCardView) => [card.nextRenewalAt, card.nextRenewalEnd].filter(Boolean).join(' ~ ')
 const cardLogo = (card: ManagedCardView) => card.logo || carrierLogo(card.carrier)
-function clearFilters() { keyword.value = ''; countryFilter.value = undefined; statusFilter.value = undefined; urgencyFilter.value = undefined }
+function clearFilters() { keyword.value = ''; countryFilter.value = undefined; statusFilter.value = undefined; urgencyFilter.value = undefined; typeFilter.value = undefined }
 const loading = ref(false), saving = ref(false), visible = ref(false), conflict = ref(false), loadError = ref(false)
 const deleting = ref('')
 const editing = ref<SimCard>()
 const form = ref<CardSpec>({ name: '', records: [] })
 const formTab = ref('basic')
-const formTabs = computed(() => [{ id: 'basic', label: t('基本信息') }, { id: 'renewal', label: t('续费与消费') }, { id: 'more', label: t('更多设置') }])
+const formTabs = computed(() => [{ id: 'basic', label: t('基本信息') }, { id: 'renewal', label: t('续费与消费') }, { id: 'more', label: t('更多设置') }, { id: 'visibility', label: t('公开设置') }])
+// 与后端 PublicCard.OPTIONAL_PUBLIC_FIELDS 保持一致；未勾选时访客接口不会返回这些字段。
+const publicFieldOptions = computed(() => [
+ { value: 'number', label: t('完整号码') }, { value: 'type', label: t('卡片类型') }, { value: 'device', label: t('主要使用设备') },
+ { value: 'balance', label: t('余额与更新日期') }, { value: 'account', label: t('账户名称') }, { value: 'services', label: t('绑定的服务') },
+])
+const alwaysPublic = computed(() => [t('展示名称'), t('运营商'), t('号码末四位'), t('号码国家'), t('续费周期与价格'), t('有效期与续费日期'), t('消费金额与日期')])
+const alwaysPrivate = computed(() => [t('消费记录标题'), t('数据检查备注')])
+// FormKit 文本输入默认有约 20ms 防抖，失焦时等它把最后的输入写回模型后再整理，否则会被原值覆盖。
+function tidyNumber() { setTimeout(() => { form.value.number = compactNumber(form.value.number) }, 50) }
 const cycle = ref('')
 let initializing = false
 const checking = ref('')
@@ -158,6 +167,8 @@ function normalize(spec: CardSpec): CardSpec {
   if (!result[key]) delete result[key]
  }
  const country = result.countryName?.trim() ?? ''
+ result.number = compactNumber(result.number)
+ if (!result.publicFields?.length) delete result.publicFields
  const flag = country.match(/^[\u{1F1E6}-\u{1F1FF}]{2}/u)?.[0] ?? ''
  result.region = flag || undefined
  result.countryName = country.slice(flag.length).trim() || undefined
@@ -221,7 +232,7 @@ function remove(card: ManagedCardView) {
   },
  })
 }
-watch([keyword, countryFilter, statusFilter, urgencyFilter, size], () => { page.value = 1 })
+watch([keyword, countryFilter, statusFilter, urgencyFilter, typeFilter, size], () => { page.value = 1 })
 watch(filteredCards, () => { page.value = Math.min(page.value, Math.max(1, Math.ceil(total.value / size.value))) })
 watch(locale, load)
 onMounted(load)
@@ -244,9 +255,10 @@ function openFrontend() { window.open('/simnook/', '_blank', 'noopener,noreferre
   <VSpace spacing="md" class="w-full flex-wrap p-4">
    <SearchInput v-model="keyword" :placeholder="t('搜索名称、号码或运营商')" />
    <FilterDropdown v-model="countryFilter" :label="t('号码国家')" :items="[{ label: t('全部') }, ...countryOptions]" />
+   <FilterDropdown v-model="typeFilter" :label="t('卡片类型')" :items="[{ label: t('全部') }, ...typeOptions]" />
    <FilterDropdown v-model="statusFilter" :label="t('状态')" :items="[{ label: t('全部') }, { value: 'active', label: t('使用中') }, { value: 'expired', label: t('已过期') }, { value: 'cancelled', label: t('已注销') }]" />
    <FilterDropdown v-model="urgencyFilter" :label="t('续费紧急度')" :items="[{ label: t('全部') }, ...URGENCY_CODES.map(value => ({ value, label: t(urgencyLabels[value]!) }))]" />
-   <VButton v-if="keyword || countryFilter || statusFilter || urgencyFilter" size="sm" ghost @click="clearFilters">{{ t('清除筛选') }}</VButton>
+   <VButton v-if="keyword || countryFilter || typeFilter || statusFilter || urgencyFilter" size="sm" ghost @click="clearFilters">{{ t('清除筛选') }}</VButton>
   </VSpace>
   <VLoading v-if="loading" />
   <VEmpty v-else-if="loadError" :title="t('加载失败')" :message="t('请检查权限或网络后重试')"><template #actions><VButton @click="load">{{ t('重试') }}</VButton></template></VEmpty>
@@ -261,7 +273,8 @@ function openFrontend() { window.open('/simnook/', '_blank', 'noopener,noreferre
    <template #end>
     <VEntityField v-if="renewalDate(card)" :description="renewalDate(card)" />
     <VEntityField :description="t('消费记录数量', card.history?.length || 0)" />
-    <VEntityField><template #description><VStatusDot :state="urgencyState(card.urgencyCode)" :animate="card.urgencyCode === 'overdue'" :text="card.status === 'active' ? urgencyText(card) : [card.statusLabel, urgencyText(card)].filter(Boolean).join(' · ')" /></template></VEntityField>
+    <VEntityField v-if="card.status !== 'cancelled'"><template #description><VStatusDot :state="urgencyState(card.urgencyCode)" :animate="card.urgencyCode === 'overdue'" :text="urgencyText(card)" /></template></VEntityField>
+    <VEntityField><template #description><VTag :theme="card.status === 'active' ? 'default' : 'danger'">{{ card.statusLabel }}</VTag></template></VEntityField>
    </template>
    <template #dropdownItems>
     <VDropdownItem @click="openCard(card)">{{ t('编辑') }}</VDropdownItem>
@@ -280,14 +293,17 @@ function openFrontend() { window.open('/simnook/', '_blank', 'noopener,noreferre
   <VAlert v-if="conflict" type="warning" class="mb-4" :description="t('编辑冲突提示')"><template #actions><VButton size="sm" @click="reloadEditing">{{ t('重新加载') }}</VButton></template></VAlert>
   <VTabbar v-model:active-id="formTab" :items="formTabs" class="mb-4" type="outline" />
   <FormKit id="simnook-form" v-model="form" type="form" :actions="false" :config="{ validationVisibility: 'submit' }" @submit="save" @submit-invalid="showInvalidTab">
+   <!-- 表单自带 divide-y，各分页包在同一个容器里，避免隐藏分页之间多出分割线。 -->
+   <div>
    <div v-show="formTab === 'basic'">
     <FormKit name="carrier" type="select" :label="t('运营商')" :placeholder="t('选择或输入运营商')" :options="withExisting(BUILTIN_CARRIERS.map(item => item.name), form.carrier)" searchable allow-create clearable />
     <VSpace v-if="logoPreview" spacing="md" class="mb-4"><VAvatar :src="logoPreview" :alt="t('运营商图标预览')" size="md" /><span class="text-sm text-gray-500">{{ t('已匹配运营商图标，可在更多设置中更换。') }}</span></VSpace>
     <div class="simnook-form-grid grid grid-cols-1 gap-x-4 md:grid-cols-2">
-     <FormKit name="number" type="text" :label="t('完整号码（私有）')" :help="t('填写国际格式，如 +85255550123。')" />
+     <!-- FormKit 由宿主提供，组件级 @blur 不可靠；在外层捕获原生 focusout，离开输入框时整理号码。 -->
+     <div @focusout="tidyNumber"><FormKit name="number" type="text" :label="t('完整号码')" :help="t('号码整理说明')" /></div>
      <FormKit name="countryName" type="select" :label="t('号码国家')" :placeholder="t('选择号码国家')" :options="withExisting(countries, form.countryName)" searchable allow-create clearable :help="t('自定义地区请用「国旗 emoji + 空格 + 名称」，用于地图定位。')" />
      <FormKit name="typeKind" type="select" :label="t('卡片类型')" :placeholder="t('选择卡片类型')" :options="typeOptions" clearable />
-     <FormKit name="name" type="text" :label="t('展示名称（公开）')" validation="required|length:1,100" :help="t('自动生成「运营商 · 号码末四位」，可以修改。')" />
+     <FormKit name="name" type="text" :label="t('展示名称')" validation="required|length:1,100" :help="t('自动生成「运营商 · 号码末四位」，可以修改。')" />
     </div>
    </div>
    <div v-show="formTab === 'renewal'">
@@ -320,16 +336,16 @@ function openFrontend() { window.open('/simnook/', '_blank', 'noopener,noreferre
      <FormKit name="cancelledAt" type="date" :label="t('停用日期')" :help="t('填写后自动标记为已注销。')" />
     </div>
     <FormKit v-if="editing?.spec.cancelled" name="cancelled" type="checkbox" :label="t('已注销（旧版标记）')" />
-    <h3 class="mb-2 mt-2 border-t pt-4 text-sm font-semibold">{{ t('私有信息') }}</h3>
+    <h3 class="mb-2 mt-2 border-t pt-4 text-sm font-semibold">{{ t('个人信息') }}</h3>
     <div class="simnook-form-grid grid grid-cols-1 gap-x-4 md:grid-cols-2">
-     <FormKit name="balance" type="number" :label="t('余额（私有）')" step="0.01" />
-     <FormKit name="balanceUpdatedAt" type="date" :label="t('余额更新日期（私有）')" />
-     <FormKit name="device" type="select" :label="t('主要使用设备（私有）')" :placeholder="t('选择主要使用设备')" :options="withExisting(devices, form.device)" searchable allow-create clearable />
-     <FormKit name="account" type="text" :label="t('账户名称（私有）')" :help="t('仅记录名称，不存储密码、密钥或令牌。')" />
+     <FormKit name="balance" type="number" :label="t('余额')" step="0.01" />
+     <FormKit name="balanceUpdatedAt" type="date" :label="t('余额更新日期')" />
+     <FormKit name="device" type="select" :label="t('主要使用设备')" :placeholder="t('选择主要使用设备')" :options="withExisting(devices, form.device)" searchable allow-create clearable />
+     <FormKit name="account" type="text" :label="t('账户名称')" :help="t('仅记录名称，不存储密码、密钥或令牌。')" />
     </div>
-    <FormKit name="services" type="select" :label="t('绑定的服务（私有）')" :options="withExisting(services, ...(form.services ?? []))" multiple searchable allow-create />
-    <FormKit v-if="editing?.spec.typeLabel" name="typeLabel" type="text" :label="t('具体卡片类型（私有）')" />
-    <FormKit v-if="editing?.spec.dataCheck" name="dataCheck" type="textarea" :label="t('旧版数据检查备注（私有）')" />
+    <FormKit name="services" type="select" :label="t('绑定的服务')" :options="withExisting(services, ...(form.services ?? []))" multiple searchable allow-create />
+    <FormKit v-if="editing?.spec.typeLabel" name="typeLabel" type="text" :label="t('具体卡片类型')" />
+    <FormKit v-if="editing?.spec.dataCheck" name="dataCheck" type="textarea" :label="t('旧版数据检查备注')" />
     <h3 class="mb-2 mt-2 border-t pt-4 text-sm font-semibold">{{ t('外观与排序') }}</h3>
     <div class="simnook-form-grid grid grid-cols-1 gap-x-4 md:grid-cols-2">
      <FormKit name="typeColor" type="select" :label="t('类型图标颜色')" :placeholder="t('随卡片类型')" :options="typeColors" clearable />
@@ -338,13 +354,22 @@ function openFrontend() { window.open('/simnook/', '_blank', 'noopener,noreferre
     </div>
     <FormKit name="logo" type="attachment" :label="t('自定义运营商图标')" :help="t('选择或上传后优先使用此图标。')" />
    </div>
+   <div v-show="formTab === 'visibility'">
+    <VAlert type="info" class="mb-4" :description="t('公开设置说明')" />
+    <p class="mb-2 text-sm font-semibold">{{ t('始终公开') }}</p>
+    <p class="mb-4 text-sm text-gray-500">{{ alwaysPublic.join('、') }}</p>
+    <FormKit name="publicFields" type="checkbox" :label="t('选择公开字段')" :options="publicFieldOptions" :help="t('未勾选的字段只有登录的管理员能看到。')" />
+    <p class="mb-2 mt-4 text-sm font-semibold">{{ t('始终私有') }}</p>
+    <p class="text-sm text-gray-500">{{ alwaysPrivate.join('、') }}</p>
+   </div>
+   </div>
   </FormKit>
   <template #footer><VButton type="secondary" :loading="saving" :disabled="conflict" @click="submit">{{ t('保存') }}</VButton></template>
  </VModal>
  <VModal v-if="check" :title="`${check.name} · ${t('数据检查')}`" :width="640" mount-to-body @close="check = undefined">
   <VEntityContainer>
    <VEntity>
-    <template #start><VEntityField :title="`${check.statusLabel} · ${urgencyText(check)}`" :description="check.dataCheck || t('号卡没有检查提示')" /></template>
+    <template #start><VEntityField :title="check.status === 'cancelled' ? check.statusLabel : `${check.statusLabel} · ${urgencyText(check)}`" :description="check.dataCheck || t('号卡没有检查提示')" /></template>
    </VEntity>
    <VEntity v-for="record in check.history?.filter(item => item.checks?.length)" :key="record.id">
     <template #start><VEntityField :title="record.title?.trim() || [record.date, recordTypeLabel(record.type)].map(value => value?.trim()).filter(Boolean).join(' · ') || t('未命名消费记录')" :description="record.checks?.join(locale.startsWith('zh') ? '；' : '; ')" /></template>
@@ -355,5 +380,5 @@ function openFrontend() { window.open('/simnook/', '_blank', 'noopener,noreferre
 
 <style>
 /* FormKit 的 first:pt-0 / last:pb-0 只认 DOM 首尾，并排时会让同一行字段上下错位，统一内边距。 */
-.simnook-form-grid > .formkit-outer { padding-top: 0; padding-bottom: 1rem; }
+.simnook-form-grid > .formkit-outer, .simnook-form-grid > div > .formkit-outer { padding-top: 0; padding-bottom: 1rem; }
 </style>

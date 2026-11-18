@@ -79,6 +79,11 @@ public class SimCard extends AbstractExtension {
         private List<String> services;
         private String dataCheck;
 
+        /** 默认私有、由用户选择公开的字段，取值见 {@link PublicCard#OPTIONAL_PUBLIC_FIELDS}；为空时全部保持私有。 */
+        @io.swagger.v3.oas.annotations.media.ArraySchema(
+                schema = @Schema(allowableValues = {"number", "type", "device", "balance", "account", "services"}))
+        private List<String> publicFields;
+
         @io.swagger.v3.oas.annotations.media.ArraySchema(maxItems = 1000)
         private List<ExpenseRecord> records;
     }

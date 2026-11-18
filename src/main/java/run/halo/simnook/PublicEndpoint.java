@@ -39,6 +39,7 @@ public class PublicEndpoint implements CustomEndpoint {
     public RouterFunction<ServerResponse> endpoint() {
         return RouterFunctions.route()
                 .GET("cards", request -> {
+                    var locale = Messages.locale(request.headers().firstHeader(HttpHeaders.ACCEPT_LANGUAGE));
                     return settings.getSettingValues()
                             .map(RenewalSettings::from)
                             .flatMap(schedule -> client.list(
@@ -46,12 +47,14 @@ public class PublicEndpoint implements CustomEndpoint {
                                             c -> c.getMetadata().getDeletionTimestamp() == null,
                                             PublicCard.SOURCE_ORDER)
                                     .index()
-                                    .map(item -> PublicCard.from(
+                                    .map(item -> PublicCard.visitorView(
                                             item.getT2(),
                                             schedule.today(),
-                                            item.getT1().intValue()))
+                                            item.getT1().intValue(),
+                                            locale))
                                     .collectList()
                                     .flatMap(cards -> ServerResponse.ok()
+                                            .varyBy(HttpHeaders.ACCEPT_LANGUAGE)
                                             .bodyValue(Map.of("cards", cards, "demo", false, "full", false))));
                 })
                 .GET("site", this::site)

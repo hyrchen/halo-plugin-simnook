@@ -73,11 +73,12 @@ export default {
     bar: '横条',
   },
 
+  // 与后端 messages_zh_CN.properties 的 type.* 保持一致，前后台显示同一文案。
   cardKinds: {
     physical: '实体 SIM',
-    adapter: 'eSIM 卡托',
-    embedded: '手机内置 eSIM',
-    virtual: '虚拟号码',
+    adapter: 'eSIM · 卡托',
+    embedded: 'eSIM · 直写手机',
+    virtual: '虚拟号码（仅 App）',
   },
 
   status: {
@@ -160,7 +161,6 @@ export default {
   },
 
   card: {
-    uncategorized: '未分类',
     firstPurchase: '首次购买 {amount}',
     heldFor: '已持有 {days}',
     remaining: '剩余',

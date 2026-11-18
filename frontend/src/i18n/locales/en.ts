@@ -155,7 +155,6 @@ const en: MessageSchema = {
   },
 
   card: {
-    uncategorized: 'Uncategorized',
     firstPurchase: 'Initial purchase {amount}',
     heldFor: 'Held for {days}',
     remaining: 'Remaining',

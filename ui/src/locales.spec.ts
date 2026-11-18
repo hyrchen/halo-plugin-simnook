@@ -9,7 +9,7 @@ describe('Console 宿主语言', () => {
   const host = createI18n({ legacy: false, locale: 'zh-CN', messages: { 'zh-CN': {}, en: {} } })
   const component = defineComponent({ setup() {
    const { t, label, recordTypeLabel } = useSimnookI18n()
-   return () => h('div', [t('号卡'), label('🇭🇰 中国香港'), label('我自己的设备'), t('填写国际格式，如 +85255550123。'), recordTypeLabel('Renewal'), recordTypeLabel('我的特殊充值活动'), t('分页总数', { count: 4 })].join('|'))
+   return () => h('div', [t('号卡'), label('🇭🇰 中国香港'), label('我自己的设备'), t('号码整理说明'), recordTypeLabel('Renewal'), recordTypeLabel('我的特殊充值活动'), t('分页总数', { count: 4 })].join('|'))
   } })
   const wrapper = mount(component, { global: { plugins: [host] } })
   expect(wrapper.text()).toContain('号卡|🇭🇰 中国香港|我自己的设备')

@@ -12,6 +12,23 @@ import run.halo.app.extension.Metadata;
 
 class PublicCardTest {
     @Test
+    void visitorViewOnlyAddsFieldsTheOwnerMadePublic() {
+        var c = card();
+        var today = LocalDate.of(2026, 11, 7);
+        var hidden = PublicCard.visitorView(c, today, 0, Locale.SIMPLIFIED_CHINESE);
+        assertThat(hidden).doesNotContainKeys("number", "type", "device", "balance", "account", "services");
+        assertThat(hidden.toString()).doesNotContain("private-account", "private-device", "13800123456");
+
+        c.getSpec().setTypeKind("adapter");
+        c.getSpec().setPublicFields(List.of("type", "number", "unknown"));
+        var shown = PublicCard.visitorView(c, today, 0, Locale.SIMPLIFIED_CHINESE);
+        assertThat(shown.get("type")).isEqualTo("eSIM · 卡托");
+        assertThat(shown.get("number")).isEqualTo("+86 13800123456");
+        assertThat(shown.get("publicFields")).isEqualTo(List.of("number", "type"));
+        assertThat(shown).doesNotContainKeys("device", "balance", "account", "services");
+    }
+
+    @Test
     void codesKeepAliveActionsWithoutChangingOriginalValues() {
         var c = card();
         var actions = List.of("充值余额", " Auto-charge ", "自定义保号动作");

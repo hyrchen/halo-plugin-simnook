@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { PublicField, SimCard } from '@shared/types'
 import type { CurrencyCode } from '@/utils/financeHelper'
 import { Icon } from '@iconify/vue'
 import { computed, defineAsyncComponent, onMounted } from 'vue'
@@ -26,7 +27,6 @@ import {
   isBalanceStale,
   joinList,
   keepAliveLabels,
-  shortTypeLabel,
   statusText,
 } from '@/utils/cardHelpers'
 import { getKindIcon, getKindName, getTypeColorClass } from '@/utils/cardTypeHelper'
@@ -50,6 +50,11 @@ onMounted(() => {
 })
 
 const data = computed(() => cardsStore.cardsById.get(String(route.params.id)))
+
+/** 管理员可见全部字段；访客只能看到该号卡在后台「公开设置」中勾选的字段。 */
+function isLocked(card: SimCard | undefined, field: PublicField): boolean {
+  return !cardsStore.full && !card?.publicFields?.includes(field)
+}
 
 interface InfoItem {
   /** Stable key; `label` changes with the language */
@@ -119,13 +124,14 @@ const metricCards = computed<MetricCard[]>(() => {
 
 const numberInfo = computed<InfoItem[]>(() => {
   const card = data.value
-  const locked = !cardsStore.full
   const lockedValue = lockedHint.value
+  const deviceLocked = isLocked(card, 'device')
   return [
     { key: 'number', label: t('detail.fields.number'), value: card ? getNumberDisplay(card) : '-', icon: 'tabler:phone', valueClass: 'font-mono' },
     { key: 'country', label: t('detail.fields.country'), value: card ? countryName(card) || '-' : '-', icon: 'tabler:world' },
-    { key: 'type', label: t('detail.fields.type'), value: locked ? lockedValue : card?.type ? shortTypeLabel(card.type) : '-', icon: 'tabler:device-sim', locked },
-    { key: 'device', label: t('detail.fields.device'), value: locked ? lockedValue : card?.device || '-', icon: 'tabler:device-mobile', locked },
+    // 类型代码本就公开；具体文案（含手填类型）未公开时退回到类型代码的译名，与后台同源，不再截掉 eSIM 前缀。
+    { key: 'type', label: t('detail.fields.type'), value: card ? card.type || getKindName(card.typeKind) : '-', icon: 'tabler:device-sim' },
+    { key: 'device', label: t('detail.fields.device'), value: deviceLocked ? lockedValue : card?.device || '-', icon: 'tabler:device-mobile', locked: deviceLocked },
   ]
 })
 
@@ -143,8 +149,8 @@ const balanceInfo = computed<InfoItem[]>(() => {
   const card = data.value
   if (!card)
     return []
-  const locked = !cardsStore.full
   const lockedValue = lockedHint.value
+  const locked = isLocked(card, 'balance')
   const hold = getHoldInfo(card)
   return [
     { key: 'balance', label: t('detail.fields.balance'), value: locked ? lockedValue : getBalanceInfo(card).text, icon: 'tabler:wallet', locked },
@@ -155,12 +161,15 @@ const balanceInfo = computed<InfoItem[]>(() => {
 
 const accountInfo = computed<InfoItem[]>(() => {
   const card = data.value
-  const locked = !cardsStore.full
   const lockedValue = lockedHint.value
+  const accountLocked = isLocked(card, 'account')
+  const servicesLocked = isLocked(card, 'services')
+  // 数据检查备注不在可公开字段内，仅管理员可见。
+  const checkLocked = !cardsStore.full
   return [
-    { key: 'account', label: t('detail.fields.account'), value: locked ? lockedValue : card?.account || '-', icon: 'tabler:user', locked },
-    { key: 'services', label: t('detail.fields.services'), value: locked ? lockedValue : joinList(card?.services ?? []) || '-', icon: 'tabler:link', locked },
-    { key: 'dataCheck', label: t('detail.fields.dataCheck'), value: locked ? lockedValue : card?.dataCheck || t('detail.noIssues'), icon: 'tabler:alert-triangle', locked, valueClass: !locked && card?.dataCheck ? 'text-yellow-600 dark:text-yellow-400' : '' },
+    { key: 'account', label: t('detail.fields.account'), value: accountLocked ? lockedValue : card?.account || '-', icon: 'tabler:user', locked: accountLocked },
+    { key: 'services', label: t('detail.fields.services'), value: servicesLocked ? lockedValue : joinList(card?.services ?? []) || '-', icon: 'tabler:link', locked: servicesLocked },
+    { key: 'dataCheck', label: t('detail.fields.dataCheck'), value: checkLocked ? lockedValue : card?.dataCheck || t('detail.noIssues'), icon: 'tabler:alert-triangle', locked: checkLocked, valueClass: !checkLocked && card?.dataCheck ? 'text-yellow-600 dark:text-yellow-400' : '' },
   ]
 })
 

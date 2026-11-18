@@ -196,11 +196,7 @@ public class ManagementEndpoint implements CustomEndpoint {
                 "urgency",
                 CardFacts.urgency(
                         publicCard.status(), publicCard.nextRenewalAt(), publicCard.nextRenewalEnd(), today, locale));
-        result.put(
-                "type",
-                present(spec.getTypeLabel())
-                        ? spec.getTypeLabel()
-                        : Messages.text(locale, "type." + CardFacts.typeKind(spec)));
+        result.put("type", CardFacts.typeText(spec, locale));
         result.put("number", spec.getNumber());
         result.put("balance", spec.getBalance());
         result.put("balanceUpdatedAt", CardFacts.date(spec.getBalanceUpdatedAt()));

@@ -156,6 +156,12 @@ export interface CardSpec {
      */
     'price'?: number;
     /**
+     * 默认私有、由用户选择公开的字段
+     * @type {Array<string>}
+     * @memberof CardSpec
+     */
+    'publicFields'?: Array<string>;
+    /**
      * 
      * @type {Array<ExpenseRecord>}
      * @memberof CardSpec
