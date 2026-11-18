@@ -252,14 +252,19 @@ function openFrontend() { window.open('/simnook/', '_blank', 'noopener,noreferre
   <template #header><VTabbar v-model:active-id="tab" :items="tabs" class="w-full" type="outline" /></template>
  <ReminderPanel v-if="tab === 'todo'" @saved="load" />
   <template v-else>
-  <VSpace spacing="md" class="w-full flex-wrap p-4">
-   <SearchInput v-model="keyword" :placeholder="t('搜索名称、号码或运营商')" />
-   <FilterDropdown v-model="countryFilter" :label="t('号码国家')" :items="[{ label: t('全部') }, ...countryOptions]" />
-   <FilterDropdown v-model="typeFilter" :label="t('卡片类型')" :items="[{ label: t('全部') }, ...typeOptions]" />
-   <FilterDropdown v-model="statusFilter" :label="t('状态')" :items="[{ label: t('全部') }, { value: 'active', label: t('使用中') }, { value: 'expired', label: t('已过期') }, { value: 'cancelled', label: t('已注销') }]" />
-   <FilterDropdown v-model="urgencyFilter" :label="t('续费紧急度')" :items="[{ label: t('全部') }, ...URGENCY_CODES.map(value => ({ value, label: t(urgencyLabels[value]!) }))]" />
-   <VButton v-if="keyword || countryFilter || typeFilter || statusFilter || urgencyFilter" size="sm" ghost @click="clearFilters">{{ t('清除筛选') }}</VButton>
-  </VSpace>
+  <!-- 沿用 Halo 列表页筛选栏的结构：灰底条，搜索在左，筛选靠右；筛选顺序与列表从左到右的展示顺序一致。 -->
+  <div class="block w-full bg-gray-50 px-4 py-3">
+   <div class="relative flex flex-col flex-wrap items-start gap-4 sm:flex-row sm:items-center">
+    <div class="flex w-full flex-1 items-center sm:w-auto"><SearchInput v-model="keyword" :placeholder="t('搜索名称、号码或运营商')" /></div>
+    <VSpace spacing="lg" class="flex-wrap">
+     <FilterCleanButton v-if="keyword || countryFilter || typeFilter || statusFilter || urgencyFilter" @click="clearFilters" />
+     <FilterDropdown v-model="typeFilter" :label="t('卡片类型')" :items="[{ label: t('全部') }, ...typeOptions]" />
+     <FilterDropdown v-model="countryFilter" :label="t('号码国家')" :items="[{ label: t('全部') }, ...countryOptions]" />
+     <FilterDropdown v-model="urgencyFilter" :label="t('续费紧急度')" :items="[{ label: t('全部') }, ...URGENCY_CODES.map(value => ({ value, label: t(urgencyLabels[value]!) }))]" />
+     <FilterDropdown v-model="statusFilter" :label="t('状态')" :items="[{ label: t('全部') }, { value: 'active', label: t('使用中') }, { value: 'expired', label: t('已过期') }, { value: 'cancelled', label: t('已注销') }]" />
+    </VSpace>
+   </div>
+  </div>
   <VLoading v-if="loading" />
   <VEmpty v-else-if="loadError" :title="t('加载失败')" :message="t('请检查权限或网络后重试')"><template #actions><VButton @click="load">{{ t('重试') }}</VButton></template></VEmpty>
   <VEmpty v-else-if="!filteredCards.length" :title="t(cards.length ? '没有匹配的号卡' : '还没有号卡')" :message="t(cards.length ? '调整筛选条件查看其他号卡。' : '首次安装为空库，点击新增号卡开始录入。')" />

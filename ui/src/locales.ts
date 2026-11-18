@@ -11,7 +11,7 @@ const en = {
  '渠道名称': 'Channel name', '接收用户': 'Recipients', '接收用户说明': 'Select up to 50 users with card management permission. Users can unsubscribe in Halo.',
  '启用渠道': 'Enable channel', '保存渠道': 'Save channel', '发送测试': 'Send test', '汇总范围': 'Digest scope',
  '续费提醒': 'Renewal reminders', '备份恢复': 'Backup and restore', '全部': 'All', '状态': 'Status', '使用中': 'Active', '已过期': 'Expired',
- '搜索名称、号码或运营商': 'Search name, number or carrier', '续费紧急度': 'Renewal urgency', '清除筛选': 'Clear filters',
+ '搜索名称、号码或运营商': 'Search name, number or carrier', '续费紧急度': 'Renewal urgency',
  '续费窗口开放': 'Renewal window open', '已逾期': 'Overdue', '未来 3 天内': 'Within 3 days', '未来 7 天内': 'Within 7 days',
  '未来 15 天内': 'Within 15 days', '未来 30 天内': 'Within 30 days', '未来 60 天内': 'Within 60 days', '超过 60 天': 'More than 60 days', '无续费日期': 'No renewal date',
  '没有匹配的号卡': 'No matching cards', '调整筛选条件查看其他号卡。': 'Adjust the filters to view other cards.',
