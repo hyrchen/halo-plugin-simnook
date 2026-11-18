@@ -43,6 +43,7 @@ const formTabs = computed(() => [{ id: 'basic', label: t('基本信息') }, { id
 const PUBLIC_FIELDS = Object.values(CardSpecPublicFieldsEnum)
 // 未设置过公开列表的号卡，沿用早期版本访客可见的字段。
 const DEFAULT_PUBLIC_FIELDS: CardSpecPublicFieldsEnum[] = ['name', 'carrier', 'last4', 'country', 'type', 'keepAlive', 'cycle', 'price', 'dates', 'firstPurchase', 'history']
+const resetPublicFields = () => { form.value.publicFields = [...DEFAULT_PUBLIC_FIELDS] }
 const publicFieldOptions = computed(() => PUBLIC_FIELDS.map(value => ({ value, label: t(({
  name: '展示名称', carrier: '运营商与图标', last4: '号码末四位', number: '完整号码', country: '号码国家', type: '卡片类型', keepAlive: '保号动作',
  cycle: '续费周期', price: '续费价格', dates: '有效期与续费日期', firstPurchase: '首次购买日期', history: '消费记录', device: '主要使用设备',
@@ -74,7 +75,8 @@ const typeColors = computed(() => [
 ])
 const keepAliveOptions = ['充值余额', '购买/启用增值服务', '有效使用（含收发短信）', '产生余额变动（如发漫游短信）', '自动扣费', '购买续费套餐']
 const devices = ['主力机', '备用机', '卡托', '未装机']
-const services = ['Telegram', 'WhatsApp', 'Signal', 'Apple ID', 'Google', '银行/支付', '其他']
+// 常用服务作预设；其他服务可在选择框中直接输入名称后回车添加。
+const services = ['Telegram', 'WhatsApp', 'Signal', 'Apple ID', 'Google', '银行/支付']
 const countries = [
  '🇨🇳 中国', '🇭🇰 中国香港', '🇲🇴 中国澳门', '🇹🇼 中国台湾', '🇯🇵 日本', '🇰🇷 韩国', '🇸🇬 新加坡', '🇲🇾 马来西亚',
  '🇹🇭 泰国', '🇵🇭 菲律宾', '🇮🇩 印度尼西亚', '🇻🇳 越南', '🇱🇰 斯里兰卡', '🇦🇪 阿联酋', '🇹🇷 土耳其', '🇬🇧 英国',
@@ -328,7 +330,6 @@ function openFrontend() { window.open('/simnook/', '_blank', 'noopener,noreferre
      <FormKit name="cycleDays" type="hidden" :value="form.cycleDays" preserve />
      <FormKit name="cycleLabel" type="hidden" :value="form.cycleLabel" preserve />
     </template>
-    <h3 class="mb-2 text-sm font-semibold">{{ t('续费与停用') }}</h3>
     <div class="simnook-form-grid grid grid-cols-1 gap-x-4 md:grid-cols-2">
      <FormKit name="nextRenewalAt" type="date" :label="t('下次续费起始日')" :help="t('留空时跟随有效期。')" />
      <FormKit name="nextRenewalEnd" type="date" :label="t('续费截止日')" :help="t('可选。填写后，前台显示续费日期区间。')" />
@@ -347,7 +348,7 @@ function openFrontend() { window.open('/simnook/', '_blank', 'noopener,noreferre
      <FormKit name="device" type="select" :label="t('主要使用设备')" :placeholder="t('选择主要使用设备')" :options="withExisting(devices, form.device)" searchable allow-create clearable />
      <FormKit name="account" type="text" :label="t('账户名称')" :help="t('仅记录名称，不存储密码、密钥或令牌。')" />
     </div>
-    <FormKit name="services" type="select" :label="t('绑定的服务')" :options="withExisting(services, ...(form.services ?? []))" multiple searchable allow-create />
+    <FormKit name="services" type="select" :label="t('绑定的服务')" :options="withExisting(services, ...(form.services ?? []))" multiple searchable allow-create :help="t('绑定服务说明')" />
    </div>
    <div v-show="formTab === 'appearance'">
     <div class="simnook-form-grid grid grid-cols-1 gap-x-4 md:grid-cols-2">
@@ -359,6 +360,7 @@ function openFrontend() { window.open('/simnook/', '_blank', 'noopener,noreferre
    </div>
    <div v-show="formTab === 'visibility'">
     <FormKit name="publicFields" type="checkbox" :label="t('公开字段')" :options="publicFieldOptions" />
+    <VButton size="sm" @click="resetPublicFields">{{ t('恢复默认') }}</VButton>
    </div>
    </div>
   </FormKit>
