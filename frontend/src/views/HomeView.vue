@@ -115,10 +115,6 @@ function handleCardClick(card: SimCard) {
   router.push({ name: 'card-detail', params: { id: card.id } })
 }
 
-function getNodeItemTransitionKey(card: SimCard): string {
-  return `${appStore.nodeSelectedGroup}-${appStore.cardStyle}-${card.id}`
-}
-
 function getNodeItemTransitionStyle(index: number): Record<string, string> {
   return {
     '--node-item-delay': `${Math.min(index, nodeItemStaggerLimit) * nodeItemStaggerMs}ms`,
@@ -203,26 +199,34 @@ function getNodeItemTransitionStyle(index: number): Record<string, string> {
             </div>
           </div>
           <TabsContent :key="appStore.nodeSelectedGroup" :value="appStore.nodeSelectedGroup" class="pointer-events-auto">
-            <TransitionGroup
-              v-if="cardList.length !== 0"
-              :appear="!appStore.disablePageAnimation"
+            <!-- 切换卡片样式时整组替换网格：out-in 保证旧网格离场后新网格才挂载，避免新旧卡片同时占位导致错位 -->
+            <Transition
               :css="!appStore.disablePageAnimation"
-              name="node-card-switch"
-              tag="div"
-              class="gap-3 grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(300px,1fr))]"
+              name="node-card-grid"
+              mode="out-in"
             >
-              <div
-                v-for="(card, index) in cardList"
-                :key="getNodeItemTransitionKey(card)"
-                class="min-w-0"
-                :style="getNodeItemTransitionStyle(index)"
+              <TransitionGroup
+                v-if="cardList.length !== 0"
+                :key="appStore.cardStyle"
+                :appear="!appStore.disablePageAnimation"
+                :css="!appStore.disablePageAnimation"
+                name="node-card-switch"
+                tag="div"
+                class="gap-3 grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(300px,1fr))]"
               >
-                <SimCardItem :card="card" :card-style="appStore.cardStyle" @click="handleCardClick(card)" />
+                <div
+                  v-for="(card, index) in cardList"
+                  :key="card.id"
+                  class="min-w-0"
+                  :style="getNodeItemTransitionStyle(index)"
+                >
+                  <SimCardItem :card="card" :card-style="appStore.cardStyle" @click="handleCardClick(card)" />
+                </div>
+              </TransitionGroup>
+              <div v-else key="empty" class="text-muted-foreground text-center py-8">
+                <Empty :description="debouncedSearchText.trim() ? t('home.noMatch') : t('home.empty')" />
               </div>
-            </TransitionGroup>
-            <div v-else class="text-muted-foreground text-center py-8">
-              <Empty :description="debouncedSearchText.trim() ? t('home.noMatch') : t('home.empty')" />
-            </div>
+            </Transition>
           </TabsContent>
         </Tabs>
       </div>
@@ -231,6 +235,18 @@ function getNodeItemTransitionStyle(index: number): Record<string, string> {
 </template>
 
 <style scoped>
+/* 整组网格离场；进场由内层 TransitionGroup 的 appear 逐张错开完成 */
+.node-card-grid-leave-active {
+  transition:
+    opacity 160ms ease,
+    filter 160ms ease;
+}
+
+.node-card-grid-leave-to {
+  opacity: 0;
+  filter: blur(2px);
+}
+
 .node-card-switch-enter-active,
 .node-card-switch-leave-active {
   transition:
@@ -260,6 +276,7 @@ function getNodeItemTransitionStyle(index: number): Record<string, string> {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .node-card-grid-leave-active,
   .node-card-switch-enter-active,
   .node-card-switch-leave-active,
   .node-card-switch-move {
@@ -267,6 +284,7 @@ function getNodeItemTransitionStyle(index: number): Record<string, string> {
     transition-delay: 0ms;
   }
 
+  .node-card-grid-leave-to,
   .node-card-switch-enter-from,
   .node-card-switch-leave-to {
     opacity: 1;
