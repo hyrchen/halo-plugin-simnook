@@ -1,20 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import type { CardSpec, ManagedCardView } from '../api/generated'
-import { copyCardConfiguration, newExpense, suggestedExtension } from './cardEntry'
+import { newExpense, suggestedExtension } from './cardEntry'
 import { filterCardViews, tidyPhoneNumber } from './cardManagement'
 
 describe('号卡录入', () => {
- it('再添同款只复制套餐字段，不带出号码、私有信息和日期', () => {
-  const source: CardSpec = {
-   name: '示例运营商 · 1234', number: '+852 55551234', currency: 'HKD', account: 'private-login', balance: 45,
-   cancelledAt: '2026-10-01', nextRenewalAt: '2026-12-01', publicFields: ['number'], keepAlive: ['自动扣费'], records: [{ amount: 100 }],
-  }
-  const copied = copyCardConfiguration(source)
-  expect(copied).toEqual({ name: '', carrier: '示例运营商', currency: 'HKD', keepAlive: ['自动扣费'], records: [] })
-  copied.keepAlive!.push('购买续费套餐')
-  expect(source.keepAlive).toEqual(['自动扣费'])
- })
-
  it('新消费按记录数决定类型，续费从当前有效期顺延一个周期', () => {
   const card: CardSpec = { name: '测试卡', carrier: '运营商', number: '+86 13800123456', currency: 'USD', cycleDays: 30 }
   expect(newExpense(card, '2026-11-07')).toMatchObject({ type: '首次购买/开卡', currency: 'USD', title: '运营商 · 3456 · 首次购买/开卡 · 2026-11-07' })

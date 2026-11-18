@@ -10,7 +10,7 @@ import ReminderPanel from './ReminderPanel.vue'
 import BackupView from './BackupView.vue'
 import { filterCardViews, tidyPhoneNumber, URGENCY_CODES } from '../utils/cardManagement'
 import { BUILTIN_CARRIERS, builtinLogoOptions, carrierLogo } from '../../../frontend/shared/carriers'
-import { CYCLE_OPTIONS, cardName, copyCardConfiguration, cycleChoice, entryExpiry, localDay } from '../utils/cardEntry'
+import { CYCLE_OPTIONS, cardName, cycleChoice, entryExpiry, localDay } from '../utils/cardEntry'
 
 const { t, locale, label, recordTypeLabel } = useSimnookI18n()
 
@@ -46,7 +46,7 @@ const PUBLIC_FIELDS = Object.values(CardSpecPublicFieldsEnum)
 const DEFAULT_PUBLIC_FIELDS: CardSpecPublicFieldsEnum[] = ['name', 'carrier', 'last4', 'country', 'type', 'keepAlive', 'cycle', 'price', 'dates', 'firstPurchase', 'history']
 const resetPublicFields = () => { form.value.publicFields = [...DEFAULT_PUBLIC_FIELDS] }
 const publicFieldOptions = computed(() => PUBLIC_FIELDS.map(value => ({ value, label: t(({
- name: '展示名称', carrier: '运营商与图标', last4: '号码末四位', number: '完整号码', country: '号码国家', type: '卡片类型', keepAlive: '保号动作',
+ name: '展示名称', carrier: '运营商与图标', last4: '号码末四位', number: '完整号码', country: '国家地区', type: '卡片类型', keepAlive: '保号动作',
  cycle: '续费周期', price: '续费价格', dates: '有效期与续费日期', firstPurchase: '首次购买日期', history: '消费记录', device: '主要使用设备',
  balance: '余额与更新日期', account: '账户名称', services: '绑定的服务',
 } as Record<string, string>)[value]!) })))
@@ -134,17 +134,17 @@ async function load() {
  } catch (error) { if (current === sequence) { loadError.value = true; Toast.error(t('加载失败，请重试')); console.error(error) } }
  finally { if (current === sequence) loading.value = false }
 }
-async function openCard(card: ManagedCardView, copy = false) {
+async function openCard(card: ManagedCardView) {
  try {
   const { data } = await api.getSimCard({ name: card.id! })
-  await edit(copy ? undefined : data, copy ? data.spec : undefined)
+  await edit(data)
  } catch (error) { Toast.error(t('加载失败，请重试')); console.error(error) }
 }
-async function edit(card?: SimCard, template?: CardSpec) {
+async function edit(card?: SimCard) {
  tab.value = 'cards'
  initializing = true
  editing.value = card ? clone(card) : undefined
- form.value = card ? clone(card.spec) : template ? copyCardConfiguration(template) : { name: '', records: [] }
+ form.value = card ? clone(card.spec) : { name: '', records: [] }
  for (const record of form.value.records ?? []) record.id ||= crypto.randomUUID()
  if (form.value.region) form.value.countryName = [form.value.region, form.value.countryName].filter(Boolean).join(' ')
  if (!card) form.value.name = cardName(form.value.carrier, form.value.number)
@@ -256,7 +256,7 @@ function openFrontend() { window.open('/simnook/', '_blank', 'noopener,noreferre
     <VSpace spacing="lg" class="flex-wrap">
      <FilterCleanButton v-if="keyword || countryFilter || typeFilter || statusFilter || urgencyFilter" @click="clearFilters" />
      <FilterDropdown v-model="typeFilter" :label="t('卡片类型')" :items="[{ label: t('全部') }, ...typeOptions]" />
-     <FilterDropdown v-model="countryFilter" :label="t('号码国家')" :items="[{ label: t('全部') }, ...countryOptions]" />
+     <FilterDropdown v-model="countryFilter" :label="t('国家地区')" :items="[{ label: t('全部') }, ...countryOptions]" />
      <FilterDropdown v-model="urgencyFilter" :label="t('续费紧急度')" :items="[{ label: t('全部') }, ...URGENCY_CODES.map(value => ({ value, label: t(urgencyLabels[value]!) }))]" />
      <FilterDropdown v-model="statusFilter" :label="t('状态')" :items="[{ label: t('全部') }, { value: 'active', label: t('使用中') }, { value: 'expired', label: t('已过期') }, { value: 'cancelled', label: t('已注销') }]" />
     </VSpace>
@@ -281,7 +281,6 @@ function openFrontend() { window.open('/simnook/', '_blank', 'noopener,noreferre
    <template #dropdownItems>
     <VDropdownItem @click="openCard(card)">{{ t('编辑') }}</VDropdownItem>
     <VDropdownItem v-if="card.status !== 'cancelled'" @click="renewing = card">{{ t('快捷续费') }}</VDropdownItem>
-    <VDropdownItem @click="openCard(card, true)">{{ t('再添同款') }}</VDropdownItem>
     <VDropdownDivider />
     <VDropdownItem type="danger" :disabled="deleting === card.id" @click="remove(card)">{{ t('删除') }}</VDropdownItem>
    </template>
@@ -302,7 +301,7 @@ function openFrontend() { window.open('/simnook/', '_blank', 'noopener,noreferre
     <div class="simnook-form-grid grid grid-cols-1 gap-x-4 md:grid-cols-2">
      <!-- FormKit 由宿主提供，组件级 @blur 不可靠；在外层捕获原生 focusout，离开输入框时整理号码。 -->
      <div @focusout="tidyNumber"><FormKit name="number" type="text" :label="t('完整号码')" :help="t('号码整理说明')" /></div>
-     <FormKit name="countryName" type="select" :label="t('号码国家')" :placeholder="t('选择号码国家')" :options="withExisting(countries, form.countryName)" searchable allow-create clearable :help="t('自定义地区请用「国旗 emoji + 空格 + 名称」，用于地图定位。')" />
+     <FormKit name="countryName" type="select" :label="t('国家地区')" :placeholder="t('选择国家地区')" :options="withExisting(countries, form.countryName)" searchable allow-create clearable :help="t('自定义地区请用「国旗 emoji + 空格 + 名称」，用于地图定位。')" />
      <FormKit name="typeKind" type="select" :label="t('卡片类型')" :placeholder="t('选择卡片类型')" :options="typeOptions" clearable />
      <FormKit name="name" type="text" :label="t('展示名称')" validation="required|length:1,100" :help="t('自动生成「运营商 · 号码末四位」，可以修改。')" />
     </div>
@@ -314,7 +313,7 @@ function openFrontend() { window.open('/simnook/', '_blank', 'noopener,noreferre
      <FormKit v-if="cycle === 'custom'" name="cycleDays" type="number" :label="t('续费周期（天）')" validation="min:0" min="0" step="1" preserve />
      <FormKit v-if="cycle === 'custom'" name="cycleLabel" type="text" :label="t('周期说明')" preserve />
      <FormKit name="price" type="number" :label="t('续费价格')" validation="min:0" min="0" step="0.01" />
-     <FormKit name="currency" type="select" :label="t('续费币种')" :placeholder="t('选择续费币种')" :options="withExisting(currencies, form.currency)" searchable allow-create clearable validation="matches:/^[A-Z]{3}$/" :help="t('新增时按号码国家推荐币种，可以修改。')" />
+     <FormKit name="currency" type="select" :label="t('续费币种')" :placeholder="t('选择续费币种')" :options="withExisting(currencies, form.currency)" searchable allow-create clearable validation="matches:/^[A-Z]{3}$/" :help="t('新增时按国家地区推荐币种，可以修改。')" />
     </div>
     <template v-if="cycle !== 'custom'">
      <FormKit name="cycleDays" type="hidden" :value="form.cycleDays" preserve />

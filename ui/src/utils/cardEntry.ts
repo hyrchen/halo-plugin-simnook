@@ -30,24 +30,6 @@ export function cardName(carrier: string | undefined, number: string | undefined
   return [carrier.trim(), digits.length >= 4 ? digits.slice(-4) : ''].filter(Boolean).join(' · ')
 }
 
-export function copyCardConfiguration(source: CardSpec): CardSpec {
-  return JSON.parse(JSON.stringify({
-    name: '',
-    carrier: source.carrier || source.name.split(/\s*[·•|]\s*/)[0],
-    region: source.region,
-    countryName: source.countryName,
-    typeKind: source.typeKind,
-    typeColor: source.typeColor,
-    logo: source.logo,
-    keepAlive: source.keepAlive,
-    cycleDays: source.cycleDays,
-    cycleLabel: source.cycleLabel,
-    price: source.price,
-    currency: source.currency,
-    records: [],
-  }))
-}
-
 /** 当前有效期：交易日期最新、且填写了延长日期的那条消费记录，与后端 CardFacts 一致。 */
 export function entryExpiry(card: CardSpec): string | undefined {
   return card.records?.filter(record => record.date && record.extendsTo)
