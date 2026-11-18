@@ -89,7 +89,7 @@ const chartThemeColors = computed(() => ({
   offlineAreaColor: appStore.isDark ? 'rgba(234, 179, 8, 0.32)' : 'rgba(202, 138, 4, 0.22)',
   activeBorderColor: appStore.isDark ? 'rgba(16, 185, 129, 0.95)' : 'rgba(5, 150, 105, 0.92)',
   offlineBorderColor: appStore.isDark ? 'rgba(234, 179, 8, 0.8)' : 'rgba(202, 138, 4, 0.88)',
-  dotEmerald: appStore.isDark ? 'rgba(16, 185, 129, 0.92)' : 'rgba(5, 150, 105, 0.9)',
+  dotActive: appStore.isDark ? 'rgba(16, 185, 129, 0.92)' : 'rgba(5, 150, 105, 0.9)',
   dotYellow: appStore.isDark ? 'rgba(234, 179, 8, 0.92)' : 'rgba(202, 138, 4, 0.9)',
   text: appStore.isDark ? 'rgba(255, 255, 255, 0.85)' : 'rgba(0, 0, 0, 0.85)',
   textSecondary: appStore.isDark ? 'rgba(255, 255, 255, 0.55)' : 'rgba(0, 0, 0, 0.55)',
@@ -132,7 +132,7 @@ const scatterData = computed(() => points.value.map(point => ({
   itemStyle: {
     color: point.offline > 0
       ? chartThemeColors.value.dotYellow
-      : chartThemeColors.value.dotEmerald,
+      : chartThemeColors.value.dotActive,
   },
 })))
 
@@ -158,7 +158,7 @@ const chartOption = computed<EChartsOption>(() => ({
         return ''
       const flag = `<img src="/plugins/simnook/assets/frontend/assets/flags/${p.data.code}.svg" style="width:16px;height:16px;vertical-align:middle;margin-right:2px" />`
       const dot = (color: string) => `<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${color}"></span>`
-      const online = `<span style="display:flex;gap:4px;align-items:center">${dot(chartThemeColors.value.dotEmerald)} ${p.data.online}</span>`
+      const online = `<span style="display:flex;gap:4px;align-items:center">${dot(chartThemeColors.value.dotActive)} ${p.data.online}</span>`
       const offline = p.data.offline > 0 ? ` <span style="display:flex;gap:4px;align-items:center">${dot(chartThemeColors.value.dotYellow)} ${p.data.offline}</span>` : ''
       return `<div style="line-height:1.4"><span style="display:flex;gap:2px;align-items:center;">${flag}${format.encodeHTML(p.name)}</span><div style="display:flex;gap:8px;align-items:center;color:${chartThemeColors.value.textSecondary}">${online}${offline}</div></div>`
     },
@@ -215,7 +215,7 @@ const chartOption = computed<EChartsOption>(() => ({
       data: scatterData.value,
       symbol: 'circle',
       itemStyle: {
-        color: chartThemeColors.value.dotEmerald,
+        color: chartThemeColors.value.dotActive,
         borderColor: '#ffffff',
         borderWidth: 1,
       },

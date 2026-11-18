@@ -2,7 +2,7 @@
 import type { SimInfoRow } from '@/composables/useSimCardView'
 import { DataTooltip } from '@/components/ui/data-tooltip'
 
-/** Key-value rows connected by a dotted leader line, styled after Emerald */
+/** Key-value rows connected by a dotted leader line */
 
 const props = defineProps<{ rows: SimInfoRow[] }>()
 </script>

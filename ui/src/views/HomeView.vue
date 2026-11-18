@@ -3,7 +3,7 @@ import { useSimnookI18n } from '../locales'
 import { computed, ref, onMounted, watch, nextTick } from 'vue'
 import { axiosInstance } from '@halo-dev/api-client'
 import { Dialog, Toast, VAlert, VAvatar, VPageHeader, VCard, VButton, VDropdownDivider, VDropdownItem, VEntityContainer, VEntity, VEntityField, VPagination, VLoading, VEmpty, VModal, VSpace, VStatusDot, VTabbar, VTag } from '@halo-dev/components'
-import { SimCardV1alpha1Api, SimnookManagementV1alpha1Api, type SimCard, type CardSpec, type ManagedCardView } from '../api/generated'
+import { CardSpecPublicFieldsEnum, SimCardV1alpha1Api, SimnookManagementV1alpha1Api, type SimCard, type CardSpec, type ManagedCardView } from '../api/generated'
 import ExpenseFields from './ExpenseFields.vue'
 import QuickRenewal from './QuickRenewal.vue'
 import ReminderPanel from './ReminderPanel.vue'
@@ -39,10 +39,10 @@ const editing = ref<SimCard>()
 const form = ref<CardSpec>({ name: '', records: [] })
 const formTab = ref('basic')
 const formTabs = computed(() => [{ id: 'basic', label: t('基本信息') }, { id: 'renewal', label: t('续费与消费') }, { id: 'personal', label: t('个人信息') }, { id: 'appearance', label: t('外观与排序') }, { id: 'visibility', label: t('公开设置') }])
-// 与后端 PublicCard.PUBLIC_FIELDS 顺序一致；勾选的字段对访客公开，未勾选的只有管理员可见。
-const PUBLIC_FIELDS = ['name', 'carrier', 'last4', 'number', 'country', 'type', 'keepAlive', 'cycle', 'price', 'dates', 'firstPurchase', 'history', 'device', 'balance', 'account', 'services']
+// 字段清单与顺序来自后端模型生成的枚举；勾选的字段对访客公开，未勾选的只有管理员可见。
+const PUBLIC_FIELDS = Object.values(CardSpecPublicFieldsEnum)
 // 未设置过公开列表的号卡，沿用早期版本访客可见的字段。
-const DEFAULT_PUBLIC_FIELDS = ['name', 'carrier', 'last4', 'country', 'type', 'keepAlive', 'cycle', 'price', 'dates', 'firstPurchase', 'history']
+const DEFAULT_PUBLIC_FIELDS: CardSpecPublicFieldsEnum[] = ['name', 'carrier', 'last4', 'country', 'type', 'keepAlive', 'cycle', 'price', 'dates', 'firstPurchase', 'history']
 const publicFieldOptions = computed(() => PUBLIC_FIELDS.map(value => ({ value, label: t(({
  name: '展示名称', carrier: '运营商与图标', last4: '号码末四位', number: '完整号码', country: '号码国家', type: '卡片类型', keepAlive: '保号动作',
  cycle: '续费周期', price: '续费价格', dates: '有效期与续费日期', firstPurchase: '首次购买日期', history: '消费记录', device: '主要使用设备',

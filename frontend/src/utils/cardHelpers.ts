@@ -9,7 +9,7 @@ import { parseBillingCycleType } from '@/utils/tagHelper'
 
 const { t } = i18n.global
 
-/** Expiry thresholds matching Emerald: <7 days critical (red), <15 days warning (yellow) */
+/** Expiry thresholds: <7 days critical (red), <15 days warning (yellow) */
 const CRITICAL_DAYS = 7
 const WARNING_DAYS = 15
 const LONG_TERM_DAYS = 36500

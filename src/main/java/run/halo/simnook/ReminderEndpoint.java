@@ -61,7 +61,7 @@ public class ReminderEndpoint implements CustomEndpoint {
                                 .then(Mono.defer(
                                         () -> reminders.delete(request.pathVariable("name"), version(request))))
                                 .then(ServerResponse.noContent().build()),
-                        builder -> builder.operationId("deleteReminderChannel")
+                        builder -> builder.operationId("removeReminderChannel")
                                 .tag("ReminderChannels")
                                 .parameter(org.springdoc.core.fn.builders.parameter.Builder.parameterBuilder()
                                         .name("name")

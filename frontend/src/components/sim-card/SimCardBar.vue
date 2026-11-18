@@ -13,7 +13,7 @@ const props = defineProps<{ card: SimCard }>()
 const emit = defineEmits<{
   click: []
 }>()
-/** Horizontal bar card layout, closest to the original Emerald server card */
+/** Horizontal bar card layout */
 
 const { t } = useI18n()
 const { daysClass, daysText, inactive, inactiveClass, inactiveDate, inactiveLabel, keepRow, purchaseRow, subtitle, validity, validityTooltip } = useSimCardView(() => props.card)

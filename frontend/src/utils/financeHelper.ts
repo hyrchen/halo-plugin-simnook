@@ -87,7 +87,7 @@ interface ExchangeRatesCache {
   rates: Partial<Record<CurrencyCode, number>>
 }
 
-const CACHE_KEY = 'simerald_finance_exchange_rates_cny_v1'
+const CACHE_KEY = 'simnook:exchange-rates-cny'
 const MS_PER_DAY = 24 * 60 * 60 * 1000
 const MONTH_DAYS = 30
 const LONG_TERM_YEARS = 100

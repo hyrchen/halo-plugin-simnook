@@ -2,7 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { axiosInstance } from '@halo-dev/api-client'
 import { Dialog, Toast, VAlert, VButton, VDescription, VDescriptionItem, VDropdownItem, VEmpty, VEntity, VEntityContainer, VEntityField, VLoading, VModal, VSpace, VSwitch } from '@halo-dev/components'
-import { ReminderChannelsApi, type ReminderChannelInput, type ReminderChannelView, type ReminderChannelsView } from '../api/reminders'
+import { ReminderChannelsApi, type ReminderChannelInput, type ReminderChannelView, type ReminderChannelsView } from '../api/generated'
 import { useSimnookI18n } from '../locales'
 
 const { t } = useSimnookI18n()
@@ -80,7 +80,7 @@ function remove(channel: ReminderChannelView) {
   onConfirm: async () => {
    if (busy.value || !channel.name || channel.version === undefined) return
    busy.value = channel.name
-   try { await api.deleteReminderChannel({ name: channel.name, version: channel.version }); Toast.success(t('已删除')); await load() }
+   try { await api.removeReminderChannel({ name: channel.name, version: channel.version }); Toast.success(t('已删除')); await load() }
    catch (error) { Toast.error(errorMessage(error)); console.error(error) }
    finally { busy.value = '' }
   },

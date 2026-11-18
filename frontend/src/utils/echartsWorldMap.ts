@@ -7,7 +7,7 @@ type WorldGeoJson = Exclude<
   string | { geoJSON: unknown } | { svg: unknown }
 >
 
-const WORLD_MAP_NAME = 'komari-world'
+const WORLD_MAP_NAME = 'simnook-world'
 // 世界地图数据源：多 CDN 依次回退，避免单一 CDN 故障影响地图展示
 const WORLD_GEO_JSON_URLS = [
   'https://cdn.jsdelivr.net/gh/apache/echarts-www@master/asset/map/json/world.json',
@@ -15,7 +15,7 @@ const WORLD_GEO_JSON_URLS = [
   'https://gcore.jsdelivr.net/gh/apache/echarts-www@master/asset/map/json/world.json',
   'https://raw.githubusercontent.com/apache/echarts-www/master/asset/map/json/world.json',
 ]
-const WORLD_MAP_CACHE_KEY_PREFIX = 'komari-theme-emerald:world-map'
+const WORLD_MAP_CACHE_KEY_PREFIX = 'simnook:world-map'
 const WORLD_MAP_CACHE_KEY = `${WORLD_MAP_CACHE_KEY_PREFIX}` // :${__BUILD_GIT_HASH__}
 
 const ECHARTS_WORLD_NAME_TO_CODE: Record<string, string> = {

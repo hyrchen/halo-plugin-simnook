@@ -12,7 +12,7 @@ import { formatAmount, formatCNY, recordKindLabel } from '@/utils/cardHelpers'
 import '@/utils/echarts'
 
 /**
- * Renewal history for the detail page, replacing Emerald's load / ping charts:
+ * Renewal history for the detail page:
  * a bar chart of spend (CNY) by date, followed by the itemized records.
  */
 const props = defineProps<{

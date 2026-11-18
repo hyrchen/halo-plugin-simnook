@@ -1,9 +1,9 @@
 {
-  "name": "simerald",
+  "name": "simnook-frontend",
   "type": "module",
   "version": "0.1.0",
   "private": true,
-  "description": "Public card-wall website for a personal SIM and eSIM collection synced from Notion, based on the Komari Emerald theme.",
+  "description": "SIMnook 公开号卡墙前台，由 Halo 插件提供数据。",
   "license": "MIT",
   "engines": {
     "node": ">=22.18.0"
