@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { axiosInstance } from '@halo-dev/api-client'
-import { Dialog, Toast, VAlert, VButton, VDescription, VDescriptionItem, VDropdownItem, VEmpty, VEntity, VEntityContainer, VEntityField, VLoading, VModal, VSpace, VSwitch } from '@halo-dev/components'
+import { Dialog, Toast, VAlert, VButton, VDropdownItem, VEmpty, VEntity, VEntityContainer, VEntityField, VLoading, VModal, VSpace, VSwitch, VTag } from '@halo-dev/components'
+import IconNotification from '~icons/ri/notification-3-line'
 import { ReminderChannelsApi, type ReminderChannelInput, type ReminderChannelView, type ReminderChannelsView } from '../api/generated'
 import { useSimnookI18n } from '../locales'
 
@@ -37,12 +38,8 @@ const cardOptions = computed(() => {
  for (const name of draft.value.cards ?? []) if (!options.some(option => option.value === name)) options.push({ value: name, label: `${name} · ${t('号卡已删除')}` })
  return options
 })
-const recipientLabel = (name: string) => state.value?.recipients?.find(user => user.name === name)?.displayName || name
-const cardLabel = (name: string) => state.value?.cards?.find(card => card.name === name)?.displayName || name
 const eventLabel = (values: string[] = []) => values.map(value => eventOptions.value.find(option => option.value === value)?.label || value).join('、')
-const daysLabel = (values: number[] = []) => values.map(dayLabel).join('、')
-const scopeLabel = (channel: ReminderChannelView) => channel.cardScope === 'selected' ? (channel.cards ?? []).map(cardLabel).join('、') : t('全部号卡')
-const dateLabel = (value?: string) => value ? new Date(value).toLocaleString() : t('尚未发送')
+const eventSummary = (values: string[] = []) => values.length === eventOptions.value.length ? t('全部事件') : eventLabel(values)
 function errorMessage(error: unknown) {
  const data = (error as { response?: { data?: { detail?: string; message?: string } } }).response?.data
  return data?.detail || data?.message || t('提醒设置保存失败')
@@ -120,9 +117,12 @@ onMounted(load)
    <VEntityContainer v-else>
     <VEntity v-for="channel in state.channels" :key="channel.name">
      <template #start>
-      <VEntityField :title="channel.displayName" :description="`Halo · ${(channel.recipients ?? []).map(recipientLabel).join('、')}`" />
+      <VEntityField :title="channel.displayName" :description="t('发送至用户数', { count: channel.recipients?.length ?? 0 })">
+       <template #extra><VTag><template #leftIcon><IconNotification /></template>{{ t('Halo 通知') }}</VTag></template>
+      </VEntityField>
      </template>
      <template #end>
+      <VEntityField :description="`${t('接收')}：${eventSummary(channel.events)}`" />
       <VButton size="sm" :loading="busy === channel.name" :disabled="Boolean(busy)" @click="test(channel)">{{ t('发送测试') }}</VButton>
       <VSwitch :model-value="channel.enabled" :disabled="Boolean(busy)" :aria-label="`${t('启用')} ${channel.displayName}`" @update:model-value="toggle(channel, $event)" />
      </template>
@@ -130,17 +130,9 @@ onMounted(load)
       <VDropdownItem :disabled="Boolean(busy)" @click="edit(channel)">{{ t('编辑') }}</VDropdownItem>
       <VDropdownItem :disabled="Boolean(busy)" type="danger" @click="remove(channel)">{{ t('删除') }}</VDropdownItem>
      </template>
-     <template #footer>
+     <!-- 只在提交或测试失败时展示原因，其余配置在编辑弹窗里查看。 -->
+     <template v-if="channel.lastError || channel.lastTestError" #footer>
       <VSpace direction="column" align="stretch" spacing="sm" class="w-full p-4">
-       <VDescription>
-        <VDescriptionItem :label="t('每日发送时间')" :content="(channel.sendTimes ?? []).join('、')" />
-        <VDescriptionItem :label="t('提醒号卡')" :content="scopeLabel(channel)" />
-        <VDescriptionItem :label="t('接收提醒')" :content="eventLabel(channel.events)" />
-        <VDescriptionItem v-if="channel.events?.includes('upcoming')" :label="t('提前提醒天数')" :content="daysLabel(channel.daysAhead)" />
-        <VDescriptionItem v-if="channel.enabled" :label="t('下次检查时间')" :content="dateLabel(channel.nextRunAt)" />
-        <VDescriptionItem :label="t('上次提交给 Halo')" :content="dateLabel(channel.lastSubmittedAt)" />
-        <VDescriptionItem v-if="channel.lastTestAt" :label="t('上次测试')" :content="dateLabel(channel.lastTestAt)" />
-       </VDescription>
        <VAlert v-if="channel.lastError" type="error" :description="channel.lastError" />
        <VAlert v-if="channel.lastTestError" type="error" :description="channel.lastTestError" />
       </VSpace>

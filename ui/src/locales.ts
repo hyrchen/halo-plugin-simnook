@@ -1,10 +1,10 @@
 import { useI18n } from 'vue-i18n'
 
-const en = { '添加渠道': 'Add channel', '即将到期': 'Upcoming renewal',
- '用户不可用': 'User unavailable', '尚未发送': 'Not sent yet', '删除通知渠道': 'Delete notification channel',
+const en = { '添加渠道': 'Add channel', 'Halo 通知': 'Halo notification', '发送至用户数': 'Sent to {count} Halo user | Sent to {count} Halo users', '接收': 'Receives', '全部事件': 'All events', '即将到期': 'Upcoming renewal',
+ '用户不可用': 'User unavailable', '删除通知渠道': 'Delete notification channel',
  '删除渠道说明': 'Delete “{name}” and stop its notifications?', '测试已提交给 Halo': 'Test submitted to Halo',
  '暂无通知渠道': 'No notification channels', '添加渠道说明': 'Add a Halo channel and choose who receives renewal reminders.',
- '启用': 'Enable', '接收提醒': 'Reminder categories', '上次测试': 'Last test',
+ '启用': 'Enable', '接收提醒': 'Reminder categories',
  '编辑通知渠道': 'Edit notification channel', '添加通知渠道': 'Add notification channel',
  '渠道名称': 'Channel name', '接收用户': 'Recipients', '接收用户说明': 'Select up to 50 users with card management permission. Users can unsubscribe in Halo.',
  '启用渠道': 'Enable channel', '保存渠道': 'Save channel', '发送测试': 'Send test',
@@ -17,7 +17,6 @@ const en = { '添加渠道': 'Add channel', '即将到期': 'Upcoming renewal',
  '重新加载并保留草稿': 'Reload and keep draft', '新有效期': 'New expiry date', '下次续费': 'Next renewal', '保存续费': 'Save renewal',
  '续费日期更新提示': 'Saving replaces the current renewal window with the dates shown above.', '已匹配运营商图标，可在外观与排序中更换。': 'A carrier logo was matched. Change it under Appearance and order.', '提醒状态加载失败': 'Could not load reminder status', '提醒设置保存失败': 'Could not save reminder preferences',
  '提前提醒天数': 'Days ahead',
- '上次提交给 Halo': 'Last submitted to Halo', '下次检查时间': 'Next scheduled check',
  '导出备份': 'Export backup', '备份范围说明': 'Includes full numbers, private card details and expenses. JSON supports restore; CSV is for viewing.',
  '完整 JSON 备份': 'Full JSON backup', '号卡清单 CSV': 'Cards CSV', '消费记录 CSV': 'Expenses CSV',
  '恢复备份': 'Restore backup', '恢复范围说明': 'Preview this plugin’s JSON backup (up to 32 MiB). Existing IDs are skipped by default. Appending keeps card details and adds missing expenses only.',
@@ -90,6 +89,7 @@ const zh = {
  '提前天数说明': '可选择或直接输入天数（0–365）。即将到期的号卡只在距续费起始日为这些天数的那天提醒。',
  '提前天数格式': '请输入 0 到 365 的整数天数',
  '分页总数': '共 {count} 项数据',
+ '发送至用户数': '发送至 {count} 位 Halo 用户',
  '页': '页', '条 / 页': '条 / 页',
 }
 
