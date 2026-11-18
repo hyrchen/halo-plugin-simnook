@@ -1,7 +1,7 @@
 {
   "name": "simnook-frontend",
   "type": "module",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "description": "SIMnook 公开号卡墙前台，由 Halo 插件提供数据。",
   "license": "MIT",
