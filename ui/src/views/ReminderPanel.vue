@@ -10,14 +10,23 @@ const api = new ReminderChannelsApi(undefined, '', axiosInstance)
 const state = ref<ReminderChannelsView>()
 const loading = ref(false), failed = ref(false), busy = ref(''), saving = ref(false)
 const visible = ref(false), editorError = ref('')
-const draft = ref<ReminderChannelInput>({})
+// Halo 的 select 以字符串取值，发送时间与天数在表单里用字符串，保存时再转换。
+type ChannelForm = Omit<ReminderChannelInput, 'daysAhead'> & { daysAhead: string[] }
+const draft = ref<ChannelForm>({ daysAhead: [] })
 const identity = ref<Pick<ReminderChannelInput, 'name' | 'version'>>({})
 const eventOptions = computed(() => [
  { value: 'upcoming', label: t('即将到期') }, { value: 'window', label: t('续费窗口开放') }, { value: 'overdue', label: t('已逾期') },
 ])
-// 0 表示续费起始日当天；只在勾选的这些天提醒即将到期。
-const dayOptions = computed(() => [60, 30, 15, 7, 3, 1, 0].map(value => ({ value, label: value ? t('提前天数', { days: value }) : t('到期当天') })))
+const dayLabel = (days: number) => days ? t('提前天数', { days }) : t('到期当天')
+// 常用值作预设，也可以直接输入其他数字；已保存的自定义值同样显示为选项。
+const withPresets = <T extends string | number>(presets: T[], chosen: string[] = [], label: (value: T) => string = String) =>
+ [...new Set([...presets.map(String), ...chosen])].map(value => ({ value, label: label((typeof presets[0] === 'number' ? Number(value) : value) as T) }))
+const dayOptions = computed(() => withPresets([60, 30, 15, 7, 3, 1, 0], draft.value.daysAhead, dayLabel))
+const timeOptions = computed(() => withPresets(['08:00', '09:00', '12:00', '18:00', '20:00', '21:00'], draft.value.sendTimes))
 const scopeOptions = computed(() => [{ value: 'all', label: t('全部号卡') }, { value: 'selected', label: t('指定号卡') }])
+// 与后端校验一致：时间为 HH:mm，天数为 0–365 的整数，均不重复。
+const sendTimes = ({ value }: { value: unknown }) => Array.isArray(value) && value.every(time => /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(String(time)))
+const daysAhead = ({ value }: { value: unknown }) => Array.isArray(value) && value.every(day => /^\d{1,3}$/.test(String(day)) && Number(day) <= 365)
 const recipients = computed(() => {
  const options = (state.value?.recipients ?? []).filter(user => user.name).map(user => ({ value: user.name!, label: user.displayName ? `${user.displayName} (${user.name})` : user.name! }))
  for (const name of draft.value.recipients ?? []) if (!options.some(option => option.value === name)) options.push({ value: name, label: `${name} · ${t('用户不可用')}` })
@@ -31,7 +40,7 @@ const cardOptions = computed(() => {
 const recipientLabel = (name: string) => state.value?.recipients?.find(user => user.name === name)?.displayName || name
 const cardLabel = (name: string) => state.value?.cards?.find(card => card.name === name)?.displayName || name
 const eventLabel = (values: string[] = []) => values.map(value => eventOptions.value.find(option => option.value === value)?.label || value).join('、')
-const daysLabel = (values: number[] = []) => values.map(value => dayOptions.value.find(option => option.value === value)?.label || value).join('、')
+const daysLabel = (values: number[] = []) => values.map(dayLabel).join('、')
 const scopeLabel = (channel: ReminderChannelView) => channel.cardScope === 'selected' ? (channel.cards ?? []).map(cardLabel).join('、') : t('全部号卡')
 const dateLabel = (value?: string) => value ? new Date(value).toLocaleString() : t('尚未发送')
 function errorMessage(error: unknown) {
@@ -48,17 +57,15 @@ function edit(channel?: ReminderChannelView) {
  identity.value = channel ? { name: channel.name, version: channel.version } : {}
  draft.value = channel
   ? { name: channel.name, version: channel.version, displayName: channel.displayName, enabled: channel.enabled, recipients: [...channel.recipients ?? []], events: [...channel.events ?? []],
-    sendTime: channel.sendTime, cardScope: channel.cardScope, cards: [...channel.cards ?? []], daysAhead: [...channel.daysAhead ?? []] }
-  : { displayName: '', enabled: true, recipients: [], events: ['upcoming', 'window', 'overdue'], sendTime: '09:00', cardScope: 'all', cards: [], daysAhead: [7, 3, 1] }
+    sendTimes: [...channel.sendTimes ?? []], cardScope: channel.cardScope, cards: [...channel.cards ?? []], daysAhead: (channel.daysAhead ?? []).map(String) }
+  : { displayName: '', enabled: true, recipients: [], events: ['upcoming', 'window', 'overdue'], sendTimes: ['09:00'], cardScope: 'all', cards: [], daysAhead: ['7', '3', '1'] }
  editorError.value = ''; visible.value = true
 }
 async function save() {
  if (saving.value) return
  saving.value = true; editorError.value = ''
  try {
-  const input = { ...draft.value, ...identity.value }
-  // FormKit 复选框可能返回字符串，天数统一转为数字。
-  input.daysAhead = (input.daysAhead ?? []).map(Number)
+  const input: ReminderChannelInput = { ...draft.value, ...identity.value, daysAhead: draft.value.daysAhead.map(Number) }
   if (input.cardScope !== 'selected') input.cards = []
   await api.saveReminderChannel({ reminderChannelInput: input })
   visible.value = false; Toast.success(t('已保存')); await load()
@@ -70,7 +77,7 @@ async function toggle(channel: ReminderChannelView, enabled: boolean) {
  busy.value = channel.name
  try {
   await api.saveReminderChannel({ reminderChannelInput: { name: channel.name, version: channel.version, displayName: channel.displayName, recipients: channel.recipients, events: channel.events,
-   sendTime: channel.sendTime, cardScope: channel.cardScope, cards: channel.cards, daysAhead: channel.daysAhead, enabled } })
+   sendTimes: channel.sendTimes, cardScope: channel.cardScope, cards: channel.cards, daysAhead: channel.daysAhead, enabled } })
   Toast.success(t('已保存')); await load()
  } catch (error) { Toast.error(errorMessage(error)); console.error(error) }
  finally { busy.value = '' }
@@ -126,7 +133,7 @@ onMounted(load)
      <template #footer>
       <VSpace direction="column" align="stretch" spacing="sm" class="w-full p-4">
        <VDescription>
-        <VDescriptionItem :label="t('每日发送时间')" :content="channel.sendTime" />
+        <VDescriptionItem :label="t('每日发送时间')" :content="(channel.sendTimes ?? []).join('、')" />
         <VDescriptionItem :label="t('提醒号卡')" :content="scopeLabel(channel)" />
         <VDescriptionItem :label="t('接收提醒')" :content="eventLabel(channel.events)" />
         <VDescriptionItem v-if="channel.events?.includes('upcoming')" :label="t('提前提醒天数')" :content="daysLabel(channel.daysAhead)" />
@@ -147,11 +154,11 @@ onMounted(load)
   <FormKit id="simnook-channel" v-model="draft" type="form" :actions="false" :disabled="saving" @submit="save">
    <FormKit name="displayName" type="text" :label="t('渠道名称')" validation="required|length:1,100" />
    <FormKit name="recipients" type="select" :label="t('接收用户')" :options="recipients" multiple searchable validation="required" :help="t('接收用户说明')" />
-   <FormKit name="sendTime" type="time" :label="t('每日发送时间')" validation="required" :help="t('发送时间说明')" />
+   <FormKit name="sendTimes" type="select" :label="t('每日发送时间')" :options="timeOptions" multiple searchable allow-create :max-count="24" validation="required|sendTimes" :validation-rules="{ sendTimes }" :validation-messages="{ sendTimes: t('发送时间格式') }" :help="t('发送时间说明')" />
    <FormKit name="cardScope" type="radio" :label="t('提醒号卡')" :options="scopeOptions" />
    <FormKit v-if="draft.cardScope === 'selected'" name="cards" type="select" :label="t('选择号卡')" :options="cardOptions" multiple searchable validation="required" />
    <FormKit name="events" type="checkbox" :label="t('接收提醒')" :options="eventOptions" validation="required" />
-   <FormKit v-if="draft.events?.includes('upcoming')" name="daysAhead" type="checkbox" :label="t('提前提醒天数')" :options="dayOptions" validation="required" :help="t('提前天数说明')" />
+   <FormKit v-if="draft.events?.includes('upcoming')" name="daysAhead" type="select" :label="t('提前提醒天数')" :options="dayOptions" multiple searchable allow-create :max-count="20" validation="required|daysAhead" :validation-rules="{ daysAhead }" :validation-messages="{ daysAhead: t('提前天数格式') }" :help="t('提前天数说明')" />
    <FormKit name="enabled" type="checkbox" :label="t('启用渠道')" />
   </FormKit>
   <template #footer>

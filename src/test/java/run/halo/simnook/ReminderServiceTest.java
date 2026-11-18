@@ -56,13 +56,28 @@ class ReminderServiceTest {
     }
 
     @Test
-    void waitsForEachChannelSendTime() {
+    void sendsOncePerSendTimeSlot() {
         var f = new Fixture();
-        // 固定时钟为上海 09:00，发送时间 10:00 的渠道本轮不发送。
-        f.channel.getSpec().setSendTime("10:00");
+        // 固定时钟为上海 09:00：只有 10:00 的渠道本轮不发送，下次是今天 10:00。
+        f.channel.getSpec().setSendTimes(List.of("10:00"));
         f.service.check().block();
         verifyNoInteractions(f.emitter);
-        assertThat(ReminderService.viewOf(f.channel).nextRunAt()).endsWith("T02:00:00Z");
+        assertThat(ReminderService.viewOf(f.channel, ZonedDateTime.of(2026, 11, 8, 9, 0, 0, 0, RenewalSettings.ZONE))
+                        .nextRunAt())
+                .isEqualTo("2026-11-08T02:00:00Z");
+
+        // 08:00 和 09:00 都已过：只按最晚的 09:00 时段发一次，同一时段不重复。
+        f.channel.getSpec().setSendTimes(List.of("08:00", "09:00", "21:00"));
+        f.service.check().block();
+        f.service.check().block();
+        verify(f.emitter, times(2)).emit(anyString(), any());
+        assertThat(f.channel.getSpec().getSubmittedDates()).containsEntry("admin", "2026-11-08@09:00");
+
+        var evening = ZonedDateTime.of(2026, 11, 8, 21, 30, 0, 0, RenewalSettings.ZONE);
+        assertThat(ReminderService.currentSlot(f.channel.getSpec().getSendTimes(), evening))
+                .isEqualTo("2026-11-08@21:00");
+        assertThat(ReminderService.nextRun(f.channel.getSpec().getSendTimes(), evening))
+                .isEqualTo("2026-11-09T00:00:00Z");
     }
 
     @Test
@@ -109,29 +124,40 @@ class ReminderServiceTest {
     }
 
     private static ReminderService.ChannelInput input(
-            String name, List<String> events, String sendTime, String scope, List<String> cards, List<Integer> days) {
+            String name,
+            List<String> events,
+            List<String> times,
+            String scope,
+            List<String> cards,
+            List<Integer> days) {
         return new ReminderService.ChannelInput(
-                name, "测试", true, List.of("admin"), events, sendTime, scope, cards, days, name == null ? null : 9L);
+                name, "测试", true, List.of("admin"), events, times, scope, cards, days, name == null ? null : 9L);
     }
 
     @Test
     void rejectsInvalidInputStaleVersionsAndUnauthorizedRecipients() {
         var f = new Fixture();
         var upcoming = List.of("upcoming");
+        var nine = List.of("09:00");
         assertThatThrownBy(() -> ReminderService.validate(new ReminderService.ChannelInput(
-                        null, "", true, List.of(), List.of(), "09:00", "all", List.of(), List.of(7), null)))
+                        null, "", true, List.of(), List.of(), nine, "all", List.of(), List.of(7), null)))
                 .hasMessageContaining("渠道名称");
-        assertThatThrownBy(() -> ReminderService.validate(input(null, upcoming, "9点", "all", List.of(), List.of(7))))
-                .hasMessageContaining("HH:mm");
         assertThatThrownBy(() ->
-                        ReminderService.validate(input(null, upcoming, "09:00", "selected", List.of(), List.of(7))))
+                        ReminderService.validate(input(null, upcoming, List.of("9点"), "all", List.of(), List.of(7))))
+                .hasMessageContaining("HH:mm");
+        assertThatThrownBy(() -> ReminderService.validate(
+                        input(null, upcoming, List.of("09:00", "09:00"), "all", List.of(), List.of(7))))
+                .hasMessageContaining("不重复");
+        assertThatThrownBy(
+                        () -> ReminderService.validate(input(null, upcoming, nine, "selected", List.of(), List.of(7))))
                 .hasMessageContaining("号卡");
-        assertThatThrownBy(() -> ReminderService.validate(input(null, upcoming, "09:00", "all", List.of(), List.of())))
+        assertThatThrownBy(() -> ReminderService.validate(input(null, upcoming, nine, "all", List.of(), List.of(400))))
                 .hasMessageContaining("天数");
-        // 只提醒逾期时不需要天数。
-        ReminderService.validate(input(null, List.of("overdue"), "09:00", "all", List.of(), List.of()));
+        // 只提醒逾期时不需要天数；自定义天数在 0–365 内均可。
+        ReminderService.validate(input(null, List.of("overdue"), nine, "all", List.of(), List.of()));
+        ReminderService.validate(input(null, upcoming, nine, "all", List.of(), List.of(45, 10, 0)));
 
-        var stale = input("channel-a", upcoming, "09:00", "all", List.of(), List.of(7));
+        var stale = input("channel-a", upcoming, nine, "all", List.of(), List.of(7));
         assertThatThrownBy(() -> f.service.save(stale).block()).hasMessageContaining("409");
         when(f.roles.listPermissions(anySet())).thenReturn(Flux.empty());
         assertThatThrownBy(() -> f.service.save(stale).block()).hasMessageContaining("无号卡管理权限");
@@ -147,14 +173,14 @@ class ReminderServiceTest {
                 false,
                 List.of("admin", "other"),
                 List.of("overdue"),
-                "08:30",
+                List.of("20:00", "08:30"),
                 "selected",
                 List.of("a"),
                 List.of(1, 30, 7),
                 1L);
         var saved = f.service.save(input).block();
         assertThat(saved.enabled()).isFalse();
-        assertThat(saved.sendTime()).isEqualTo("08:30");
+        assertThat(saved.sendTimes()).containsExactly("08:30", "20:00");
         assertThat(saved.cards()).containsExactly("a");
         // 未勾选「即将到期」时不保留天数。
         assertThat(saved.daysAhead()).isEmpty();

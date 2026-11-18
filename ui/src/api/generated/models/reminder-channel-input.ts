@@ -70,10 +70,10 @@ export interface ReminderChannelInput {
     'recipients'?: Array<string>;
     /**
      * 
-     * @type {string}
+     * @type {Array<string>}
      * @memberof ReminderChannelInput
      */
-    'sendTime'?: string;
+    'sendTimes'?: Array<string>;
     /**
      * 
      * @type {number}

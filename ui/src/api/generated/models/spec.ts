@@ -88,10 +88,10 @@ export interface Spec {
     'recipients'?: Array<string>;
     /**
      * 
-     * @type {string}
+     * @type {Array<string>}
      * @memberof Spec
      */
-    'sendTime'?: string;
+    'sendTimes'?: Array<string>;
     /**
      * 
      * @type {{ [key: string]: string; }}

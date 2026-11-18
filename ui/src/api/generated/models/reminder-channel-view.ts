@@ -100,10 +100,10 @@ export interface ReminderChannelView {
     'recipients'?: Array<string>;
     /**
      * 
-     * @type {string}
+     * @type {Array<string>}
      * @memberof ReminderChannelView
      */
-    'sendTime'?: string;
+    'sendTimes'?: Array<string>;
     /**
      * 
      * @type {number}

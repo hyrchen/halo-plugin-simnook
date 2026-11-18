@@ -73,7 +73,7 @@ public class ReminderService {
             boolean enabled,
             List<String> recipients,
             List<String> events,
-            String sendTime,
+            List<String> sendTimes,
             String cardScope,
             List<String> cards,
             List<Integer> daysAhead,
@@ -86,7 +86,7 @@ public class ReminderService {
             boolean enabled,
             List<String> recipients,
             List<String> events,
-            String sendTime,
+            List<String> sendTimes,
             String cardScope,
             List<String> cards,
             List<Integer> daysAhead,
@@ -143,24 +143,46 @@ public class ReminderService {
 
     static ChannelView viewOf(ReminderChannel channel, ZonedDateTime now) {
         var spec = channel.getSpec();
-        var next = now.toLocalDate().atTime(LocalTime.parse(spec.getSendTime())).atZone(RenewalSettings.ZONE);
-        if (!next.isAfter(now)) next = next.plusDays(1);
+        var next = nextRun(spec.getSendTimes(), now);
         return new ChannelView(
                 channel.getMetadata().getName(),
                 spec.getDisplayName(),
                 spec.isEnabled(),
                 spec.getRecipients(),
                 spec.getEvents(),
-                spec.getSendTime(),
+                spec.getSendTimes(),
                 spec.getCardScope(),
                 spec.getCards(),
                 spec.getDaysAhead(),
                 channel.getMetadata().getVersion(),
-                next.toInstant().toString(),
+                next,
                 spec.getLastSubmittedAt(),
                 spec.getLastError(),
                 spec.getLastTestAt(),
                 spec.getLastTestError());
+    }
+
+    /** 下一个尚未到达的发送时间；今天的都已过去时取明天最早的一个。 */
+    static String nextRun(List<String> sendTimes, ZonedDateTime now) {
+        var times = sendTimes.stream().map(LocalTime::parse).sorted().toList();
+        var today = now.toLocalDate();
+        return times.stream()
+                .map(time -> today.atTime(time).atZone(RenewalSettings.ZONE))
+                .filter(time -> time.isAfter(now))
+                .findFirst()
+                .orElseGet(() -> today.plusDays(1).atTime(times.getFirst()).atZone(RenewalSettings.ZONE))
+                .toInstant()
+                .toString();
+    }
+
+    /** 当前已到达的最晚发送时段，如 2026-11-08@09:00；今天还没到任何发送时间时返回 null。 */
+    static String currentSlot(List<String> sendTimes, ZonedDateTime now) {
+        return sendTimes.stream()
+                .map(LocalTime::parse)
+                .filter(time -> !now.toLocalTime().isBefore(time))
+                .max(Comparator.naturalOrder())
+                .map(time -> now.toLocalDate() + "@" + time)
+                .orElse(null);
     }
 
     Mono<ReminderChannel> get(String name) {
@@ -201,7 +223,8 @@ public class ReminderService {
                                 spec.setEnabled(input.enabled());
                                 spec.setRecipients(List.copyOf(input.recipients()));
                                 spec.setEvents(List.copyOf(input.events()));
-                                spec.setSendTime(input.sendTime());
+                                spec.setSendTimes(
+                                        input.sendTimes().stream().sorted().toList());
                                 spec.setCardScope(input.cardScope());
                                 spec.setCards(
                                         "selected".equals(input.cardScope()) ? List.copyOf(input.cards()) : List.of());
@@ -244,8 +267,13 @@ public class ReminderService {
                 || input.events().stream().anyMatch(event -> event == null || !EVENTS.contains(event))
                 || input.events().stream().distinct().count() != input.events().size())
             throw BackupService.bad("请填写渠道名称、1 至 50 位不同接收用户及有效提醒范围");
-        if (input.sendTime() == null || !TIME.matcher(input.sendTime()).matches())
-            throw BackupService.bad("发送时间必须为 HH:mm");
+        if (input.sendTimes() == null
+                || input.sendTimes().isEmpty()
+                || input.sendTimes().size() > 24
+                || input.sendTimes().stream()
+                        .anyMatch(time -> time == null || !TIME.matcher(time).matches())
+                || input.sendTimes().stream().distinct().count()
+                        != input.sendTimes().size()) throw BackupService.bad("请填写 1 至 24 个不重复的发送时间，格式 HH:mm");
         if (!"all".equals(input.cardScope()) && !"selected".equals(input.cardScope()))
             throw BackupService.bad("请选择提醒全部号卡或指定号卡");
         if ("selected".equals(input.cardScope())
@@ -318,18 +346,24 @@ public class ReminderService {
                                     PublicCard.SOURCE_ORDER)
                             .collectList()
                             .flatMap(cards -> channels()
-                                    // 每个渠道按自己的发送时间触发，未到时间的渠道本轮跳过。
+                                    // 每个渠道按自己的发送时间触发；今天还没到任何发送时间的渠道本轮跳过。
                                     .filter(channel -> channel.getSpec().isEnabled()
-                                            && !now.toLocalTime()
-                                                    .isBefore(LocalTime.parse(
-                                                            channel.getSpec().getSendTime())))
+                                            && currentSlot(channel.getSpec().getSendTimes(), now) != null)
                                     .concatMap(channel -> exclusive(
                                                     channel.getMetadata().getName(),
                                                     () -> get(channel.getMetadata()
                                                                     .getName())
                                                             .filter(latest -> latest.getSpec()
                                                                     .isEnabled())
-                                                            .flatMap(latest -> deliver(latest, cards, today)))
+                                                            .flatMap(latest -> {
+                                                                var slot = currentSlot(
+                                                                        latest.getSpec()
+                                                                                .getSendTimes(),
+                                                                        now);
+                                                                return slot == null
+                                                                        ? Mono.empty()
+                                                                        : deliver(latest, cards, today, slot);
+                                                            }))
                                             .onErrorResume(error -> {
                                                 log.error(
                                                         "SIMnook 渠道检查失败：{}",
@@ -357,20 +391,21 @@ public class ReminderService {
         return spec.getEvents().contains("upcoming") && spec.getDaysAhead().contains((int) days);
     }
 
-    Mono<Void> deliver(ReminderChannel channel, List<SimCard> allCards, LocalDate today) {
+    /** 在当前时段给尚未提交的接收人发送汇总；slot 形如 2026-11-08@09:00，同一时段每人只提交一次，失败的下一轮重试。 */
+    Mono<Void> deliver(ReminderChannel channel, List<SimCard> allCards, LocalDate today, String slot) {
         var cards =
                 allCards.stream().filter(card -> matches(channel, card, today)).toList();
         if (cards.isEmpty()) return Mono.empty();
         if (channel.getSpec().getLastError() == null
                 && channel.getSpec().getRecipients().stream()
-                        .allMatch(user -> today.toString()
-                                .equals(channel.getSpec().getSubmittedDates().get(user)))) return Mono.empty();
+                        .allMatch(user -> slot.equals(
+                                channel.getSpec().getSubmittedDates().get(user)))) return Mono.empty();
         var name = channel.getMetadata().getName();
         var failures = new ArrayList<String>();
         // 保存每名接收人的进度，后续用户失败时不重发已经提交的用户。
         return Flux.fromIterable(channel.getSpec().getRecipients())
-                .filter(user -> !today.toString()
-                        .equals(channel.getSpec().getSubmittedDates().get(user)))
+                .filter(user ->
+                        !slot.equals(channel.getSpec().getSubmittedDates().get(user)))
                 .concatMap(user -> eligible(name, user)
                         .flatMap(allowed -> {
                             if (!allowed) {
@@ -384,7 +419,7 @@ public class ReminderService {
                                             summary(cards, today, Locale.SIMPLIFIED_CHINESE),
                                             summary(cards, today, Locale.ENGLISH))
                                     .then(Mono.defer(() -> {
-                                        channel.getSpec().getSubmittedDates().put(user, today.toString());
+                                        channel.getSpec().getSubmittedDates().put(user, slot);
                                         channel.getSpec()
                                                 .setLastSubmittedAt(
                                                         clock.instant().toString());
