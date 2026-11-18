@@ -156,7 +156,7 @@ const chartOption = computed<EChartsOption>(() => ({
       const p = params as { name: string, data: { code: string, online: number, offline: number } }
       if (!p.data)
         return ''
-      const flag = `<img src="/plugins/simnook/assets/frontend/assets/flags/${p.data.code}.svg" style="width:16px;height:16px;vertical-align:middle;margin-right:2px" />`
+      const flag = `<img src="/plugins/simnook/assets/frontend/flags/${p.data.code}.svg" style="width:16px;height:16px;vertical-align:middle;margin-right:2px" />`
       const dot = (color: string) => `<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${color}"></span>`
       const online = `<span style="display:flex;gap:4px;align-items:center">${dot(chartThemeColors.value.dotActive)} ${p.data.online}</span>`
       const offline = p.data.offline > 0 ? ` <span style="display:flex;gap:4px;align-items:center">${dot(chartThemeColors.value.dotYellow)} ${p.data.offline}</span>` : ''
@@ -255,7 +255,7 @@ onMounted(async () => {
   <div class="relative h-full border-none" content-class="h-full !p-0">
     <!-- 预加载国旗图片，避免 tooltip 重复请求 -->
     <div class="hidden">
-      <img v-for="point in points" :key="point.code" :src="`/plugins/simnook/assets/frontend/assets/flags/${point.code}.svg`">
+      <img v-for="point in points" :key="point.code" :src="`/plugins/simnook/assets/frontend/flags/${point.code}.svg`">
     </div>
     <div class="relative flex h-88 flex-col items-center">
       <div

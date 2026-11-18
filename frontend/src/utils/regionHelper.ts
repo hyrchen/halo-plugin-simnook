@@ -1632,7 +1632,7 @@ export function getRegionCode(regionEmoji: string): string {
  * @returns 国旗图片路径
  */
 export function getFlagSrc(region: string): string {
-  return `/plugins/simnook/assets/frontend/assets/flags/${getRegionCode(region)}.svg`
+  return `/plugins/simnook/assets/frontend/flags/${getRegionCode(region)}.svg`
 }
 
 /**

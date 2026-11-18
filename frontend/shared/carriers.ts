@@ -1,4 +1,4 @@
-const carrierAssets = '/plugins/simnook/assets/frontend/assets/carriers/'
+const carrierAssets = '/plugins/simnook/assets/frontend/carriers/'
 
 export const BUILTIN_CARRIERS = [
   { name: '中国移动', aliases: ['China Mobile', 'CMCC'], file: 'china-mobile.webp' },

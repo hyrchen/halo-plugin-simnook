@@ -58,7 +58,7 @@ const flagVisible = ref(true)
 const expand = ref(false)
 
 const subtitle = computed(() => location.value || (geoFailed.value ? t('visitor.anonymous') : t('visitor.unknownLocation')))
-const flagSrc = computed(() => countryCode.value ? `/plugins/simnook/assets/frontend/assets/flags/${countryCode.value}.svg` : '')
+const flagSrc = computed(() => countryCode.value ? `/plugins/simnook/assets/frontend/flags/${countryCode.value}.svg` : '')
 const displayIp = computed(() => {
   if (!ip.value)
     return t('visitor.ipUnavailable')

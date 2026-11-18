@@ -513,7 +513,7 @@ function formatNearest(days: number | null): string {
         class="absolute -top-7.5 left-0 pointer-events-none rounded backdrop-blur transition-[opacity,filter] duration-500"
       >
         <img
-          :src="`/plugins/simnook/assets/frontend/assets/flags/${cluster.code}.svg`" :alt="cluster.code"
+          :src="`/plugins/simnook/assets/frontend/flags/${cluster.code}.svg`" :alt="cluster.code"
           class="size-4 block absolute -bottom-2 -left-2 z-1"
         >
         <div class="relative z-2 bg-background/60 rounded py-0.5 px-1 text-xs zoom-80 items-start justify-center text-nowrap">
