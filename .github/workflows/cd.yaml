@@ -16,3 +16,4 @@ jobs:
       ui-path: "ui"
       app-id: app-klfhbdga
       sync-github-readme: true
+      skip-appstore-release: true
