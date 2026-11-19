@@ -1,8 +1,8 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/sunnyhmz7010/halo-plugin-simnook/main/src/main/resources/logo.svg" alt="SIMnook Logo" width="96" />
+  <img src="https://raw.githubusercontent.com/hyrchen/halo-plugin-simnook/main/src/main/resources/logo.svg" alt="SIMnook Logo" width="96" />
   <h1>SIMnook</h1>
   <p>在 Halo 中管理号卡与消费记录，并提供公开的 SIM/eSIM 收藏展示墙</p>
-  <p>公开号卡墙派生自 <a href="https://github.com/BurningSky0306/SIMerald">SIMerald</a> 与 <a href="https://github.com/Tokinx/komari-theme-emerald">Komari Emerald 主题</a>，相关代码沿用其 MIT 许可证，见 <a href="https://github.com/sunnyhmz7010/halo-plugin-simnook/blob/main/frontend/LICENSE">frontend/LICENSE</a>。在此谨向原作者致以诚挚谢意，感谢其作出的原创性贡献。</p>
+  <p>公开号卡墙派生自 <a href="https://github.com/BurningSky0306/SIMerald">SIMerald</a> 与 <a href="https://github.com/Tokinx/komari-theme-emerald">Komari Emerald 主题</a>，相关代码沿用其 MIT 许可证，见 <a href="https://github.com/hyrchen/halo-plugin-simnook/blob/main/frontend/LICENSE">frontend/LICENSE</a>。在此谨向原作者致以诚挚谢意，感谢其作出的原创性贡献。</p>
 </div>
 
 <p align="center">
@@ -13,9 +13,9 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/sunnyhmz7010/halo-plugin-simnook/releases"><img src="https://img.shields.io/github/v/release/sunnyhmz7010/halo-plugin-simnook?label=Release&amp;color=3b82f6" alt="Release" /></a>
-  <a href="https://github.com/sunnyhmz7010/halo-plugin-simnook/blob/main/LICENSE"><img src="https://img.shields.io/github/license/sunnyhmz7010/halo-plugin-simnook?color=10b981" alt="License" /></a>
-  <a href="https://github.com/sunnyhmz7010/halo-plugin-simnook/actions/workflows/ci.yaml"><img src="https://img.shields.io/github/actions/workflow/status/sunnyhmz7010/halo-plugin-simnook/ci.yaml?branch=main&amp;label=CI" alt="CI" /></a>
+  <a href="https://github.com/hyrchen/halo-plugin-simnook/releases"><img src="https://img.shields.io/github/v/release/hyrchen/halo-plugin-simnook?label=Release&amp;color=3b82f6" alt="Release" /></a>
+  <a href="https://github.com/hyrchen/halo-plugin-simnook/blob/main/LICENSE"><img src="https://img.shields.io/github/license/hyrchen/halo-plugin-simnook?color=10b981" alt="License" /></a>
+  <a href="https://github.com/hyrchen/halo-plugin-simnook/actions/workflows/ci.yaml"><img src="https://img.shields.io/github/actions/workflow/status/hyrchen/halo-plugin-simnook/ci.yaml?branch=main&amp;label=CI" alt="CI" /></a>
 </p>
 
 ---
@@ -30,7 +30,7 @@
 
 ## 📸 截图预览
 
-![SIMnook 号卡墙](https://raw.githubusercontent.com/sunnyhmz7010/halo-plugin-simnook/main/home.webp)
+![SIMnook 号卡墙](https://raw.githubusercontent.com/hyrchen/halo-plugin-simnook/main/home.webp)
 
 ## 🚀 核心能力
 
@@ -49,7 +49,7 @@
 
 ### 📦 安装与运行
 
-从 [Releases](https://github.com/sunnyhmz7010/halo-plugin-simnook/releases) 下载最新的 JAR，在 Halo 控制台「插件 → 安装」上传 JAR，启用后即可使用；也可以在 Halo 应用市场中搜索 SIMnook 安装。
+从 [Releases](https://github.com/hyrchen/halo-plugin-simnook/releases) 下载最新的 JAR，在 Halo 控制台「插件 → 安装」上传 JAR，启用后即可使用；也可以在 Halo 应用市场中搜索 SIMnook 安装。
 
 启用后从控制台「工具 → SIMnook」进入管理页，访问 `https://你的站点/simnook/` 查看公开号卡墙。
 

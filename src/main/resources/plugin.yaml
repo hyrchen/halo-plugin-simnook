@@ -7,10 +7,10 @@ spec:
   requires: ">=2.27.2"
   author:
     name: Sunny
-    website: https://github.com/sunnyhmz7010
-  homepage: https://github.com/sunnyhmz7010/halo-plugin-simnook
-  repo: https://github.com/sunnyhmz7010/halo-plugin-simnook
-  issues: https://github.com/sunnyhmz7010/halo-plugin-simnook/issues
+    website: https://github.com/hyrchen
+  homepage: https://github.com/hyrchen/halo-plugin-simnook
+  repo: https://github.com/hyrchen/halo-plugin-simnook
+  issues: https://github.com/hyrchen/halo-plugin-simnook/issues
   displayName: "SIMnook"
   logo: logo.svg
   description: "在 Halo 中管理号卡与消费记录，并提供公开的 SIM/eSIM 收藏展示墙"
@@ -18,4 +18,4 @@ spec:
   configMapName: simnook-config
   license:
     - name: GPL-3.0
-      url: https://github.com/sunnyhmz7010/halo-plugin-simnook/blob/main/LICENSE
+      url: https://github.com/hyrchen/halo-plugin-simnook/blob/main/LICENSE
