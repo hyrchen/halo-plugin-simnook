@@ -271,7 +271,8 @@ function openFrontend() { window.open('/simnook/', '_blank', 'noopener,noreferre
   <VEntityContainer v-else><VEntity v-for="card in pagedCards" :key="card.id">
    <template #start>
     <VEntityField><template #description><VAvatar :src="cardLogo(card)" :alt="card.carrier || card.name" size="md" /></template></VEntityField>
-    <VEntityField :title="card.name" :description="[card.carrier?.trim(), card.number?.trim() || t('未填写号码')].filter(Boolean).join(' · ')" @click="openCard(card)">
+    <!-- 标题已含「运营商 · 号码末四位」，副标题只补完整号码，避免两行重复运营商。 -->
+    <VEntityField :title="card.name" :description="card.number?.trim() || t('未填写号码')" @click="openCard(card)">
      <template v-if="card.type || card.countryName" #extra><VSpace spacing="xs"><VTag v-if="card.type">{{ card.type }}</VTag><VTag v-if="card.countryName">{{ [card.region, card.countryName].filter(Boolean).join(' ') }}</VTag></VSpace></template>
     </VEntityField>
    </template>
