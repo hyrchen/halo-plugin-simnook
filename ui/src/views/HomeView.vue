@@ -4,6 +4,8 @@ import { computed, ref, onMounted, watch, nextTick } from 'vue'
 import { axiosInstance } from '@halo-dev/api-client'
 import { Dialog, Toast, VAlert, VAvatar, VPageHeader, VCard, VButton, VDropdownDivider, VDropdownItem, VEntityContainer, VEntity, VEntityField, VPagination, VLoading, VEmpty, VModal, VSpace, VStatusDot, VTabbar, VTag } from '@halo-dev/components'
 import { CardSpecPublicFieldsEnum, SimCardV1alpha1Api, SimnookManagementV1alpha1Api, type SimCard, type CardSpec, type ManagedCardView } from '../api/generated'
+// 页头图标与侧边栏「工具 → SIMnook」保持一致，避免标题前留空。
+import IconSimCard from '~icons/ri/sim-card-2-line'
 import ExpenseFields from './ExpenseFields.vue'
 import QuickRenewal from './QuickRenewal.vue'
 import ReminderPanel from './ReminderPanel.vue'
@@ -237,6 +239,7 @@ function openFrontend() { window.open('/simnook/', '_blank', 'noopener,noreferre
 
 <template>
  <VPageHeader title="SIMnook">
+  <template #icon><IconSimCard /></template>
   <template #actions>
    <VButton @click="openFrontend">{{ t('打开前台页面') }}</VButton>
    <VButton v-if="tab === 'cards'" type="secondary" @click="edit()">{{ t('新增号卡') }}</VButton>
